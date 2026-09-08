@@ -55,7 +55,7 @@ Agents can call tools, observe results, and choose another step. Each run permit
 2. Explore **potential plot twists**. Early comparisons identify useful questions before the full introduction baseline is complete.
 3. Correct a preference or establish a boundary and see matching reconsider it.
 4. View a photo and personalized introduction proposal. One acceptance stays pending; two open a shared chat.
-5. Astrid introduces the pair and leaves. Further shared messages are not sent to any agent; check-ins happen privately.
+5. Astrid writes a playful opening using information authorized for both people, then leaves. Further shared messages are not sent to any agent; check-ins happen privately.
 
 The [walkthrough](DEMO_WALKTHROUGH.md) contains prepared scenarios for repeatable consent and compatibility branches.
 
@@ -81,7 +81,9 @@ The eval suites test role behavior and require manual rubric review. They do not
 
 This is a local, single-process application. Listener ports identify profiles for demonstration; they are **not authentication**. The store serializes transactions and replaces files atomically. An exclusive server lock prevents concurrent writers. After an unclean shutdown, confirm the previous process is gone before removing its stale `.server.lock`. Interrupted matching jobs are requeued on restart; provider calls are not automatically retried.
 
-Matching readiness uses 16 semantic facets and conservative age, attraction and location checks. These are approximations, not proof of compatibility. Matchy investigates one pair at a time; there is no autonomous pool-wide planner. Shared-chat openings are templated, replies are not streamed in the browser, and full post-date learning and production notifications are deferred.
+Introductions require basic understanding across seven relationship areas, plus conservative age, attraction and location checks. Sixteen facets guide discovery; they are not a mandatory interview checklist. Memy marks substantive understanding, and Matchy still evaluates consequential uncertainty and firm conflicts. These are approximations, not proof of compatibility. Matchy investigates one assigned pair at a time; there is no autonomous pool-wide planner. Browser replies are not streamed, and full post-date learning and production notifications are deferred.
+
+A failed private turn can be retried from its saved message. Completed Memy work and successful matching/sharing requests survive retries and restarts without being repeated. A newer message or profile revision prevents retrying stale work. This is recovery between application stages, not arbitrary resumption inside a model call. Existing conversations and memories remain readable without a migration; older confirmed facet records retain baseline credit pending further conversation.
 
 Memory deletion stops future use but does not erase historical transcripts. Requests use `store: false`; this is not a claim of zero provider retention. Keep custom storage targets outside tracked source files; `.env` and `.local/` are ignored by Git. An open-source license has not yet been selected.
 

@@ -1,3 +1,4 @@
+import { ViewRequests, assessmentIsCurrent } from './assessment-state.js';
 const $ = (selector) => document.querySelector(selector);
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; };
 const append = (node, ...children) => { node.append(...children.filter(Boolean)); return node; };
@@ -8,6 +9,7 @@ const drafts = new Map();
 let pendingSend = null;
 let discoverProfiles=[],discoverSignature='',selectedPerson=null;
 const assessments=new Map(),adviceBusy=new Set();
+const viewRequests=new ViewRequests();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
 const name = (id) => participant(id)?.name || 'Someone new';
 const topicLabel = (id) => bootstrap.topics.find(t => t.id === id)?.label || id;
@@ -63,11 +65,19 @@ function renderDiscover() {
     const portrait=el('div','person-portrait');const photo=el('img');photo.src=person.photo||'';photo.alt=person.name;photo.style.objectPosition=person.photoPosition||'center';portrait.append(avatar(person,'profile-art'));card.append(portrait);
     const body=el('div','person-copy');body.append(el('h3','',`${person.name||'Someone new'}${person.age?' · '+person.age:''}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
     const interests=el('div','interest-notes');for(const interest of person.interests||[])interests.append(el('span','',interest));body.append(interests);
-    const assessment=assessments.get(person.id),busy=adviceBusy.has(person.id);
+    const cached=assessments.get(person.id);
+    const assessment=assessmentIsCurrent(cached,data.participant,person)?cached:null,busy=adviceBusy.has(person.id);
     const ask=button(busy?'Astrid is forming an opinion…':assessment?'Ask Astrid again ↗':'Astrid, thoughts? ↗','button ask-astrid',async()=>{
+      const actor=activeId,ticket=viewRequests.begin(`advice:${person.id}`);
+      const current=()=>actor===activeId&&viewRequests.current(ticket);
       adviceBusy.add(person.id);renderDiscover();
-      try {const result=await api(`/api/participants/${activeId}/discover/${person.id}/advice`,{method:'POST',body:{}});assessments.set(person.id,result.assessment);await refresh(true);}
-      catch(error){showError(error.message);}finally{adviceBusy.delete(person.id);renderDiscover();}
+      try {
+        const result=await api(`/api/participants/${actor}/discover/${person.id}/advice`,{method:'POST',body:{}},actor);
+        if(!current())return;
+        await refresh(true);
+        if(current()&&assessmentIsCurrent(result.assessment,data.participant,discoverProfiles.find(p=>p.id===person.id)))assessments.set(person.id,result.assessment);
+      } catch(error){if(current())showError(error.message);}
+      finally{if(current()){adviceBusy.delete(person.id);renderDiscover();}}
     });ask.disabled=busy;body.append(ask);
     if(!assessment) body.append(append(el('div','astrid-assessment hold'),append(el('div','assessment-heading'),avatar(null),el('strong','','My take.')),el('p','',data.memories.length ? 'I don’t have a settled view of your fit yet. I need to understand more before I can recommend connecting.' : 'I don’t know much about you yet, so I can’t tell how you two would fit. Tell me a little about yourself first.')));
     if(assessment) {
@@ -109,7 +119,9 @@ function messageNode(message) {
   if(!own) item.append(avatar(message.authorId === 'astrid' ? null : participant(message.authorId)));
   const body = el('div','message-body');
   if(!own) body.append(el('div','message-name',message.authorId === 'astrid' ? 'Astrid' : name(message.authorId)));
-  body.append(el('div','message-text',message.text)); item.append(body); return item;
+  body.append(el('div','message-text',message.text));
+  if(own&&data.retryMessageId===message.id&&!sending)body.append(button('Retry Astrid’s reply','text-button',()=>retrySavedTurn(message.id)));
+  item.append(body); return item;
 }
 function proposalNode(proposal) {
   const other = proposal.other || participant(proposal.participantIds.find(id => id !== activeId));
@@ -124,7 +136,7 @@ function proposalNode(proposal) {
     try { await mutate(`/api/proposals/${proposal.id}/decision`,'POST',{decision:value},value === 'accepted' ? 'Your yes is in. Introductions take two.' : 'Proposal withdrawn.'); } catch {} finally { [...actions.querySelectorAll('button')].forEach(b => b.disabled = false); }
   };
   if(proposal.status === 'pending') {
-    if(mine === 'accepted') { body.append(el('p','proposal-status','You’re interested. Waiting for their yes before Astrid introduces you.')); actions.append(button('Withdraw my yes','button subtle small',()=>decision('withdrawn'))); }
+    if(mine === 'accepted') { const both=proposal.participantIds.every(id=>proposal.decisions[id]==='accepted');body.append(el('p','proposal-status',both?'You both said yes. Astrid is preparing your introduction.':'You’re interested. Waiting for their yes before Astrid introduces you.'));if(both)actions.append(button('Retry introduction','button',()=>decision('accepted')));actions.append(button('Withdraw my yes','button subtle small',()=>decision('withdrawn'))); }
     else actions.append(button('I’d like to meet them ↗','button',()=>decision('accepted')),button('No spark','button subtle',()=>declineDialog(proposal)));
     body.append(actions,el('p','fineprint','A conversation opens when you both say yes.'));
   } else if(proposal.status === 'introduced') { body.append(el('p','proposal-status','Two yeses. You’ve been introduced.'),button('Open your conversation ↗','button',()=>selectConversation(proposal.chatId))); }
@@ -142,7 +154,7 @@ function renderChat() {
   const chat = data.chats.find(c => c.id === conversation);
   if(conversation !== 'astrid' && conversation !== 'proposals' && !chat) conversation = 'astrid';
   const messages = composerMessages(chat?.messages || data.messages);
-  const signature = JSON.stringify([activeId,conversation,messages, data.proposals, data.permissions]);
+  const signature = JSON.stringify([activeId,conversation,messages, data.proposals, data.permissions,data.retryMessageId,sending]);
   if(signature === chatSignature) return; chatSignature = signature;
   const content = $('#chat-content'); const nearBottom = content.scrollHeight-content.scrollTop-content.clientHeight < 100; const oldScroll = content.scrollTop;
   content.replaceChildren();
@@ -216,10 +228,6 @@ function memoryDialog(memory) {
   dialog(memory ? 'Let’s get you right.' : 'In your own words.','Your edits guide future conversations and matching. Past messages stay as they were.',[topic,facet,text,strength,sharing],'Save understanding',()=>mutate(`/api/participants/${activeId}/memories${memory ? `/${memory.id}` : ''}`,memory ? 'PATCH' : 'POST',{topic:topic.input.value,...(facet.input.value?{facet:facet.input.value}:{}),text:text.input.value.trim(),status:'confirmed',strength:strength.input.value,sharing:sharing.input.value},'Understanding updated.'));
 }
 function removeMemory(memory) { dialog('Forget this detail?','Astrid will stop using this understanding. The original conversation stays in your history.',[], 'Remove understanding',()=>mutate(`/api/participants/${activeId}/memories/${memory.id}`,'DELETE',undefined,'Understanding removed.')); }
-function permissionDialog(memory) {
-  const recipient = field('Who may hear this?','select',undefined,bootstrap.participants.filter(p=>p.id !== activeId).map(p=>[p.id,p.name]));
-  dialog('A particular person, a particular detail.',`“${memory.text}” — This creates a permission request in your private chat, where you can approve or decline it.`,[recipient],'Create request',async()=>{ await mutate(`/api/participants/${activeId}/permissions`,'POST',{memoryId:memory.id,recipientId:recipient.input.value}); selectConversation('astrid'); });
-}
 function profileDialog() {
   const age=field('Your age','number',data.participant.age);age.input.min=18;age.input.max=120;age.input.required=true;
   const location=field('Where you live','text',data.participant.location);location.input.required=true;
@@ -235,27 +243,54 @@ function declineDialog(proposal) {
   const feedback=field('Anything you’d like Astrid to know? (optional)','textarea','');
   dialog('No spark is enough.','You don’t owe an explanation. Anything you share here stays between you and Astrid.',[feedback],'Pass on this introduction',()=>mutate(`/api/proposals/${proposal.id}/decision`,'POST',{decision:'declined',feedback:feedback.input.value.trim()},'Got it. No pressure.'));
 }
+function invalidateAdviceRequests() {
+  for(const id of adviceBusy)viewRequests.begin(`advice:${id}`);
+  adviceBusy.clear();
+}
+function invalidateAssessments() {
+  for(const [id,assessment] of assessments) {
+    if(!assessmentIsCurrent(assessment,data.participant,discoverProfiles.find(p=>p.id===id)))assessments.delete(id);
+  }
+}
 async function refresh(force = false) {
-  if(refreshing && !force) return; refreshing=true; const actor=activeId;
-  try { if(view === 'presenter') { const result=await api('/api/presenter'); if(view === 'presenter') renderPresenter(result); }
-    else { const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`),api(`/api/participants/${actor}/discover`)]); if(actor===activeId && view==='people') { if(data && data.resetId!==result.resetId)clearLocalState();if(data && data.participant.revision!==result.participant.revision)assessments.clear();data=result;if(discovery)discoverProfiles=discovery.profiles||[];render();if(!data.participant.name&&!$('#editor').open)nameDialog(); } }
-  } catch(error) { if(force) showError(error.message,()=>refresh(true)); } finally { refreshing=false; }
+  if(refreshing && !force) return;
+  refreshing=true;
+  const actor=activeId,ticket=viewRequests.begin('refresh'),requestedView=view;
+  const current=()=>actor===activeId&&view===requestedView&&viewRequests.current(ticket);
+  try {
+    if(requestedView==='presenter') {
+      const result=await api('/api/presenter');if(current())renderPresenter(result);
+    } else {
+      const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`,{},actor),api(`/api/participants/${actor}/discover`,{},actor)]);
+      if(!current())return;
+      if(data&&data.resetId!==result.resetId)clearLocalState();
+      data=result;discoverProfiles=discovery?.profiles||[];invalidateAssessments();render();
+      if(!data.participant.name&&!$('#editor').open)nameDialog();
+    }
+  } catch(error){if(force&&current())showError(error.message,()=>refresh(true));}
+  finally{if(viewRequests.current(ticket))refreshing=false;}
 }
 let matchingRefresh=false;
 async function startMatching() {
   if(matchingRefresh)return;matchingRefresh=true;
+  const actor=activeId,ticket=viewRequests.begin('matching');
+  const current=()=>actor===activeId&&viewRequests.current(ticket);
   const controls=[$('#review-matches'),$('#notebook-matching')];controls.forEach(b=>{b.disabled=true;b.classList.add('refreshing');b.setAttribute('aria-busy','true');});
   try {
-    assessments.clear();discoverSignature='';await refresh(true);
-    const {job}=await api(`/api/participants/${activeId}/matching`,{method:'POST',body:{}});
+    invalidateAdviceRequests();assessments.clear();discoverSignature='';await refresh(true);
+    if(!current())return;
+    const {job}=await api(`/api/participants/${actor}/matching`,{method:'POST',body:{}},actor);
     let status=job;
-    while(['queued','running'].includes(status.status)) {await new Promise(r=>setTimeout(r,500));status=(await api(`/api/participants/${activeId}/matching/${job.id}`)).job;}
-    assessments.clear();discoverSignature='';await refresh(true);
+    while(current()&&['queued','running'].includes(status.status)) {await new Promise(r=>setTimeout(r,500));if(!current())return;status=(await api(`/api/participants/${actor}/matching/${job.id}`,{},actor)).job;}
+    if(!current())return;
+    invalidateAdviceRequests();assessments.clear();discoverSignature='';await refresh(true);
+    if(!current())return;
     if(status.status==='failed')throw new Error(status.error||'Could not update the matches. Please try again.');
     if(!$('#person-dialog').hidden)$('#discover-panel .ask-astrid')?.click();
-  } catch(error){showError(error.message);}finally{matchingRefresh=false;controls.forEach(b=>{b.disabled=false;b.classList.remove('refreshing');b.removeAttribute('aria-busy');});}
+  } catch(error){if(current())showError(error.message);}
+  finally{if(current()){matchingRefresh=false;controls.forEach(b=>{b.disabled=false;b.classList.remove('refreshing');b.removeAttribute('aria-busy');});}}
 }
-function clearLocalState(){$('#editor').close();drafts.clear();assessments.clear();adviceBusy.clear();pendingSend=null;conversation='astrid';selectedPerson=null;$('#message-input').value='';$('#person-dialog').hidden=true;$('#error').hidden=true;resetSignatures();discoverSignature='';presenterSignature='';}
+function clearLocalState(){viewRequests.reset();refreshing=false;matchingRefresh=false;for(const b of [$('#review-matches'),$('#notebook-matching')]){b.disabled=false;b.classList.remove('refreshing');b.removeAttribute('aria-busy');}$('#editor').close();drafts.clear();assessments.clear();adviceBusy.clear();pendingSend=null;conversation='astrid';selectedPerson=null;$('#message-input').value='';$('#person-dialog').hidden=true;$('#error').hidden=true;resetSignatures();discoverSignature='';presenterSignature='';}
 function nameDialog(){const fieldName=field('Your name','text','');fieldName.input.required=true;dialog('A new chapter.','What should Astrid call you?',[fieldName],'Meet Astrid',async()=>{await api(`/api/participants/${activeId}/profile`,{method:'PATCH',body:{name:fieldName.input.value.trim()}});await refresh(true);});}
 $('#clear-all').addEventListener('click',()=>dialog('Start completely fresh?','This clears this profile’s name, lore and conversations, plus connections and matches involving this person. Other people’s private chats and lore stay. Your illustration stays.',[],'Clear this profile',async()=>{await api(`/api/participants/${activeId}/clear`,{method:'POST',body:{}});clearLocalState();$('#editor').close();await refresh(true);setTimeout(()=>{if(!data.participant.name)nameDialog();},0);}));
 
@@ -276,6 +311,12 @@ function renderPresenter(result) {
   if(!result.jobs.length) jobs.append(el('p','empty-state','Nothing queued. New understanding can start a matching review.'));
   grid.append(reviews,jobs); root.append(grid);
 }
+async function retrySavedTurn(messageId) {
+  if(sending||data?.busy)return;const actor=activeId;sending=true;$('#error').hidden=true;renderHeading();renderChat();
+  try {await api(`/api/participants/${actor}/messages/${messageId}/retry`,{method:'POST',body:{}},actor);await refresh(true);}
+  catch(error){showError(error.message,()=>retrySavedTurn(messageId));await refresh(true);}
+  finally {sending=false;renderHeading();renderChat();}
+}
 $('#composer').addEventListener('submit',async event=>{
   event.preventDefault(); if(sending || (conversation==='astrid'&&data?.busy)) return; const input=$('#message-input'), original=input.value, text=original.trim(); if(!text) return;
   const actor=activeId, chat=conversation, key=draftKey();
@@ -295,7 +336,7 @@ $('#composer').addEventListener('submit',async event=>{
       saved=sentMessage(chat==='astrid'?snapshot.messages:snapshot.chats.find(c=>c.id===chat)?.messages || [],submission); verified=true;
       if(actor===activeId) data=snapshot;
     } catch {}
-    if(saved) showError(`${error.message} Your message was saved. Check the conversation before sending a follow-up.`,()=>refresh(true));
+    if(saved) {const savedMessage=(chat==='astrid'?data.messages:data.chats.find(c=>c.id===chat)?.messages||[]).find(m=>!submission.knownIds.has(m.id)&&m.authorId===actor&&m.text===text);showError(`${error.message} Your message was saved.`,chat==='astrid'&&savedMessage?.turn&&savedMessage.turn.stage!=='completed'?()=>retrySavedTurn(savedMessage.id):()=>refresh(true));}
     else {
       const here=actor===activeId&&chat===conversation;
       const nextDraft=here?input.value:drafts.get(key) || '';

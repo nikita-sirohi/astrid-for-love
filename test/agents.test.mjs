@@ -18,7 +18,7 @@ test('application prompt keeps role examples, replaces laboratory limitations, a
   assert.doesNotMatch(prompt.instructions, /local prompt laboratory|No application tools are available/);
   assert.match(prompt.instructions, /one bounded application task/);
   assert.equal(prompt.hash.length, 64);
-  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.8.0.md');
+  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.9.0.md');
 });
 
 test('converse whitelists own context and strips private matching rationale from clarifications', async () => {
@@ -99,7 +99,7 @@ test('offline review shows readiness, firm family conflict and positive demo bra
   const result = await agents.review(args);
   assert.equal(result.decision, 'propose');
   assert.equal(result.metadata.model, 'scripted-demo');
-  records.pop();
+  for(let i=records.length-1;i>=0;i--)if(records[i].participantId==='b'&&records[i].topic==='convictions')records.splice(i,1);
   assert.equal((await agents.review(args)).decision, 'needs_clarification');
 });
 
@@ -115,7 +115,7 @@ test('offline family conversation records evidence and answers own queued work o
 
 test('Memy has a standalone versioned prompt and only receives own authorized understanding', async () => {
   const prompt = await applicationPrompt('memy');
-  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.5.0.md']);
+  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.6.0.md']);
   assert.match(prompt.instructions, /before Astrid's reply/);
   const result = await adapter(understanding(), request => {
     const { context } = JSON.parse(request.input[0].content);
@@ -131,7 +131,7 @@ test('Memy has a standalone versioned prompt and only receives own authorized un
     messages: [...input.messages, { ...message, chatId: 'astrid-b', authorId: 'b', text: 'OTHER SECRET' }],
     clarifications: [{ id: 'q', participantId: 'b', topic: 'family', facet: 'family.household', status: 'queued', reason: 'OTHER SECRET' }] });
   assert.equal(result.metadata.prompt.role, 'memy');
-  assert.equal(result.metadata.prompt.version, '0.5.0');
+  assert.equal(result.metadata.prompt.version, '0.6.0');
 });
 
 test('Astrid receives compact gap briefing but cannot produce understanding mutations', async () => {

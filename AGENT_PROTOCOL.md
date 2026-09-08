@@ -79,7 +79,7 @@ All people and statements here are fictional.
 
 ## Implemented subset and limits
 
-The demo persists understanding changes, jobs, pair reviews, facet-scoped clarifications, permission requests, and proposals. Current clarification statuses are queued, answered, deferred, declined, and obsolete; there is no separate addressed or partial state or general delivery-task queue; uncertainty and completion conditions derive from the shared semantic facet definitions. Astrid owns question timing within the next private conversation. Application code owns whether an answer is accepted and a proposal can proceed.
+The demo persists understanding changes, jobs, pair reviews, facet-scoped clarifications, permission requests, and proposals. Current clarification statuses are queued, answered, deferred, declined, and obsolete; there is no separate addressed or partial state or general delivery-task queue; uncertainty and completion conditions derive from the selected clarification purpose and shared semantic facet definitions. Astrid owns question timing within the next private conversation. Application code owns whether an answer is accepted and a proposal can proceed.
 
 Multiple proposals are allowed, edits stale pending proposals, and decline/withdrawal are recorded. No automatic proposal expiration exists. Matching jobs run after meaningful committed changes or a manual request, rather than a periodic schedule. Private check-ins are manually triggered. Shared opening, nudge, and departure are saved together after double acceptance; subsequent pair messages are not routed to Astrid.
 
@@ -94,7 +94,7 @@ See [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the implemented lifecycle. A 
 
 ## Implemented Memy handoff
 
-The current app adds Memy v0.2.0 before Astrid v0.8.0. `understand(ownContext)` returns atomic memory suggestions with user evidence IDs, explicit profile updates, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. Matchy handoffs carry the exact facet and recipient-owned evidence IDs; the application derives safe uncertainty/completion text from shared definitions and includes evidence revisions. No free-form private pair assessment enters Astrid’s context. Memy’s answered disposition needs latest-user evidence for that facet, not simply another fact in the same broad topic.
+The current app runs Memy v0.6.0 before Astrid v0.8.0, with Matchy v0.8.0 and runtime v0.9.0. `understand(ownContext)` returns atomic memory suggestions with user evidence IDs, explicit profile updates, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. Matchy handoffs carry the exact facet, purpose and recipient-owned evidence IDs; the application derives safe uncertainty/completion text from the purpose and facet definitions and includes evidence revisions. No free-form private pair assessment enters Astrid’s context. Memy’s answered disposition needs latest-user evidence for that facet, not simply another fact in the same broad topic.
 
 ## Personality handoff
 
@@ -103,7 +103,7 @@ Memy v0.3.0 adds separate story suggestions, each supported by fresh own user ev
 
 ### Preliminary comparisons and lore summaries
 
-Review input includes phase (preliminary/full) and missingFacets. A preliminary review tests promising compatibility hypotheses and returns consequential own-facet clarifications; the application forces exploration=hold and disallows proposals until full readiness. Astrid gives relevant queued clarification priority once the current expectation and its meaningful limits are understood. Clarification wording remains derived from semantic facets; private pair reasoning is never forwarded.
+Review input includes phase (preliminary/full), seven topic-understanding states and diagnostic missingFacets. Full baseline means substantive confirmed understanding in each topic, not all sixteen facets. Legacy confirmed facet records without a readiness classification retain baseline credit. A preliminary review tests promising compatibility hypotheses and returns consequential own-facet clarifications; the application forces exploration=hold and disallows proposals until full readiness. Astrid gives relevant queued clarification priority once the current expectation and its meaningful limits are understood. Clarification wording remains derived from its purpose and semantic facet; private pair reasoning is never forwarded.
 
 Memy understanding records include nullable summary, a display phrase of at most 110 characters. Its separate summarize task receives only the owner's current records and returns one {id,summary} per record. Source text, strength, evidence, uncertainty and consent are not rewritten by this task.
 
@@ -111,3 +111,9 @@ Memy understanding records include nullable summary, a display phrase of at most
 ### Bounded tool runs
 
 The application assigns a task and provides capabilities through closures scoped to its current participant or pair. The model can inspect tool results and choose subsequent actions within a six-step/eight-call deadline-bounded run. Memy's commit_understanding is validated and persisted before the receipt is returned; one batch per turn prevents partial multi-write understanding. Astrid tools inspect_matches, request_matching and request_sharing_permission return safe results only. Matchy's inspect_records and check_review stay private to the assigned pair. Final review publication still rechecks revisions, readiness and consent. No tool grants consent, reads shared chats, or accesses arbitrary participant state.
+
+## Saved-turn and introduction recovery
+
+Private turns save their understanding/reply stage on the original user message. Memy commits advance that stage before Astrid runs. Successful matching and permission requests persist action receipts with their side effects; retrying the saved turn reuses those receipts. Only the latest unfinished private turn with unchanged participant revision is retryable; completed retries return the existing reply. This is durable application-stage recovery, not a provider retry policy or model-step checkpoint.
+
+After both acceptances persist, Astrid receives a bounded shared-opening task with public profiles and records authorized for both recipients. No private pair rationale or transcript enters that context. The application rechecks consent, eligibility, revisions and sharing context before publishing the chat, opening and departure together. Duplicate requests coalesce; a failed generation retains both acceptances for explicit retry.

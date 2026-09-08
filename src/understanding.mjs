@@ -23,8 +23,24 @@ export function coverageDetails(state,id) {
  const records=state.memories.filter(m=>m.participantId===id&&!m.deleted&&m.kind!=='story');
  return Object.fromEntries(facets.map(f=>[f.id,records.some(m=>m.facet===f.id&&m.status==='confirmed')&&!records.some(m=>m.facet===f.id&&m.status==='tentative')]));
 }
+export function topicUnderstanding(state,id) {
+ const records=state.memories.filter(m=>m.participantId===id&&!m.deleted&&m.kind!=='story'&&facetFor(m.facet));
+ return Object.fromEntries([...new Set(facets.map(f=>f.topic))].map(topic=>{
+  const evidence=records.filter(m=>m.topic===topic&&m.readiness!=='incidental');
+  const understood=evidence.some(m=>m.status==='confirmed'&&(!m.readiness||m.readiness==='understood'));
+  return [topic,{status:understood?'understood':evidence.length?'needs_exploration':'not_discussed',evidenceIds:evidence.map(m=>m.id)}];
+ }));
+}
+export const clarificationPurposes={
+ baseline:'Establish a basic practical understanding of this area.',
+ meaning:'Clarify what this expectation means to this person, rather than assuming a shared definition.',
+ practical:'Explore what this expectation would look like in everyday life.',
+ flexibility:'Understand which parts are preferences, which are requirements, and what exceptions they accept.',
+ reciprocity:'Understand what they would give in return and whether the same expectation applies both ways.',
+ repair:'Understand what they would do after a disagreement or a hurt, using a concrete example.'
+};
 export function safeClarification(item) {
  const f=facetFor(item.facet); if(!f)return null;
  return {id:item.id,participantId:item.participantId,topic:f.topic,facet:f.id,status:item.status,
-  uncertainty:f.question,completionCondition:f.completionCondition,evidenceIds:item.evidenceIds||[],memoryRevisions:item.memoryRevisions||{}};
+  purpose:Object.hasOwn(clarificationPurposes,item.purpose)?item.purpose:'baseline',uncertainty:Object.hasOwn(clarificationPurposes,item.purpose)&&item.purpose!=='baseline'?`${clarificationPurposes[item.purpose]} Focus: ${f.label.toLowerCase()}.`:f.question,completionCondition:Object.hasOwn(clarificationPurposes,item.purpose)&&item.purpose!=='baseline'?`${clarificationPurposes[item.purpose]} Resolve the cited own expectation in this facet; a new unrelated fact is not an answer.`:f.completionCondition,evidenceIds:item.evidenceIds||[],memoryRevisions:item.memoryRevisions||{}};
 }

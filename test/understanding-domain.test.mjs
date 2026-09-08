@@ -50,13 +50,14 @@ test('deleted beliefs leave text-free tombstones and do not lock their topic aga
   assert.equal(records.length, 1); assert.notEqual(records[0].id, record.id);
 });
 
-test('household understanding does not satisfy care readiness in the same broad topic', async t => {
+test('basic family understanding does not require every family facet', async t => {
   const { app } = await setup(t, async ctx => ({ ...empty(), memories: [memory(ctx, 'I accept a relative living with us.')] }));
   await app.converse('maya', 'I accept a relative living with us.');
   const view = await app.view('maya');
   assert.equal(view.coverageDetails['family.household'], true);
   assert.equal(view.coverageDetails['family.care'], false);
-  assert.equal(view.coverage.family, false);
+  assert.equal(view.coverage.family, true);
+  assert.equal(view.topicUnderstanding.family.status, 'understood');
 });
 
 test('a clarification retains its safe facet purpose and cannot be answered by unrelated same-topic evidence', async t => {

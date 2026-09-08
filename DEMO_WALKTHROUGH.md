@@ -1,6 +1,6 @@
 # Demo walkthrough
 
-Start with `npm start` for live Astra or `npm run demo:offline` for scripted responses, then open Maya at http://127.0.0.1:4310, Eli at http://127.0.0.1:4311, and Theo at http://127.0.0.1:4312 in separate windows. The command you launch determines live versus scripted mode; the personal interface has no technical badges. Both use fictional participants and real local application state. Live wording and decisions can vary; offline wording is prepared and should be presented as such.
+This walkthrough uses the prepared fictional records from `npm run demo:offline`: open Maya at http://127.0.0.1:4310, Eli at http://127.0.0.1:4311, Theo at http://127.0.0.1:4312 and Elena at http://127.0.0.1:4313 in separate windows. Offline responses are scripted and should be presented as such. Fresh `npm start` stores instead contain blank profiles; see [startup options](README.md#start-your-own-demo) for a chosen profile count and storage target. Resume an existing live store to retain its actual conversations. The isolated `node src/demo-smoke.mjs --live` exercises these prepared branches against Astra without changing that store.
 
 Open http://127.0.0.1:4314/?view=presenter and use the reset control before a clean demonstration. Reset waits until active conversations and matching work have finished. It resets application data, not prompt-lab sessions.
 
@@ -30,13 +30,13 @@ Return to Maya’s window and private chat. Her proposal should contain Eli's ph
 
 Accept as Maya. Show that no connection chat exists yet. Open Eli’s window: his proposal has his own introduction copy. Accept as Eli.
 
-The connection chat now opens with Astrid's introduction, a light nudge, and her visible departure. Send a message as Maya and reply as Eli. Astrid does not receive or answer those shared messages. Multiple distinct proposals and chats are supported; accepting one does not require closing every other conversation.
+The connection chat now opens with Astrid's personalized introduction and her visible departure. Live openings use public profiles and records authorized for both people; the offline version is scripted. If generation fails after both accept, retry the introduction without submitting new consent. Send a message as Maya and reply as Eli. Astrid does not receive or answer those shared messages. Multiple distinct proposals and chats are supported; accepting one does not require closing every other conversation.
 
 From the connection, request the private Astrid check-in. It uses that participant's own context and the approved other profile, not the shared transcript. It may encourage a direct conversation about expectations without claiming to have watched the encounter. This is a manual check-in, not a full post-date learning system.
 
 ## 4. Show memory control and changed judgment
 
-For a clean alternative branch, reset and repeat the family clarification. Before accepting a proposal, edit Maya's family memory to make hands-on partner caregiving a **confirmed firm requirement**. Save it and review again.
+In an isolated prepared store, reset and repeat the family clarification for a clean alternative branch. Do not reset a live store whose conversations you want to preserve. Before accepting a proposal, edit Maya's family memory to make hands-on partner caregiving a **confirmed firm requirement**. Save it and review again.
 
 The old pending proposal becomes stale. The revised expectation should alter the matching assessment, potentially withholding Eli or generating a consequential clarification. Inspect that actual result. A user edit is authoritative and is not silently overwritten from old chat history. Removing a memory can also reopen a coverage gap. These operations do not erase the displayed historical transcript.
 
@@ -59,4 +59,4 @@ This is a local, single-process demo with a scoped file-backed memory API and se
 
 ## Browse-first clubhouse
 
-Start at Eli’s window on port4311. Select Elena under the active conversations; the inline profile panel automatically asks Astrid for her assessment. The offline branch calls their planning/spontaneity difference worth exploring; live Matchy may judge their stated flexibility sufficient for a promising match. Express interest, then open Elena’s window on port4313 and accept separately. Both windows now share a connection; Astrid opens it and leaves. Ask about Maya to demonstrate withholding while important understanding remains incomplete. The notebook controls profile visibility as well as memory and matching consent.
+Start at Eli’s window on port4311. Select Elena under the active conversations; the inline profile panel automatically asks Astrid for her assessment. The offline branch calls their planning/spontaneity difference worth exploring; live Matchy may judge their stated flexibility sufficient for a promising match. Express interest, then open Elena’s window on port4313 and accept separately. Both windows now share a connection; Astrid opens it and leaves. Ask about Maya to demonstrate withholding while important understanding remains incomplete. Your lore controls profile visibility as well as memory and matching consent.

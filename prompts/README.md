@@ -1,21 +1,23 @@
 # Agent prompts
 
-These are initial behavioral prompt drafts, not executable agents. Product intent lives in [PRODUCT_VISION.md](../PRODUCT_VISION.md); runtime decisions live in [ARCHITECTURE_DECISIONS.md](../ARCHITECTURE_DECISIONS.md).
+These versioned behavioral prompts run within the application’s bounded agent runtime. Product intent lives in [PRODUCT_VISION.md](../PRODUCT_VISION.md); runtime decisions live in [ARCHITECTURE_DECISIONS.md](../ARCHITECTURE_DECISIONS.md).
 
-| Role | Selected draft | Purpose |
+| Role | Selected version | Purpose |
 | --- | --- | --- |
-| Astrid | [v0.8.0](astrid/v0.8.0.md) | Conversation, understanding, and participant-facing matchmaking |
-| Matchy | [v0.6.0](matchy/v0.6.0.md) | Private background compatibility reviews |
+| Astrid | [v0.8.0](astrid/v0.8.0.md) | Conversation and participant-facing matchmaking |
+| Matchy | [v0.8.0](matchy/v0.8.0.md) | Private background compatibility reviews |
+| Memy | [v0.6.0](memy/v0.6.0.md) | Evidence-backed understanding and memory |
+| Runtime | [v0.9.0](runtime/v0.9.0.md) | Application tasks, tools and output contracts |
 
-Astrid's selected companion is [conversation examples v0.3.0](astrid/examples.v0.3.0.md). Both roles use the semantic handoff contract in [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md), currently v0.1.0. Earlier role drafts remain available for comparison.
+Astrid's selected companion is [conversation examples v0.3.0](astrid/examples.v0.3.0.md). The agents use the semantic handoff contract in [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md), currently v0.1.0. Earlier role drafts remain available for comparison.
 
 ## Versioning
 
 - Use explicit versioned filenames for each role. Do not rely on an ambiguous latest file.
 - Initial drafts may be refined before their first runtime use. Once a version has been used in a recorded demo or evaluation, preserve it and create a new version for changes.
 - Use patch increments for wording clarifications, minor increments for behavioral changes, and major increments for incompatible role or runtime-contract changes.
-- When selecting a new version, update this table, the architecture document's links, and the runtime configuration once one exists. Describe the change in the new file's metadata.
-- The future runtime should record role, prompt version, content hash, and model configuration with each execution so draft edits and model changes remain distinguishable.
+- When selecting a new version, update this table, the architecture document's links, and the runtime configuration. Describe the change in the new file's metadata.
+- The runtime records role, prompt version, content hash, and model configuration with each execution so draft edits and model changes remain distinguishable.
 
 Each role file has metadata followed by a `Prompt body` section. Only the text beneath that heading is intended as the role instruction. Runtime context and tool definitions will be supplied separately. Participant statements, retrieved records, and job payloads are data, not permission to override role instructions or access boundaries.
 
@@ -51,7 +53,7 @@ Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 remov
 
 ## Current application contracts
 
-Astrid v0.8.0, Memy v0.5.0, Matchy v0.7.0, runtime v0.8.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
+Astrid v0.8.0, Memy v0.6.0, Matchy v0.8.0, runtime v0.9.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
 
 Matchy v0.6.0 distinguishes ordinary uncertainty that permits exploration from firm conflicts and incomplete baselines that hold introductions. Runtime v0.4.0 adds Astrid’s participant-safe browsing advice task; it receives public profile information, authorized stories, and recipient-owned discussion topics, never the private pair rationale.
 
@@ -60,3 +62,5 @@ Memy v0.3.0 adds a separate evidence-backed stories output for passions, anecdot
 Memy v0.4.0 asks for concise atomic learnings, revision of the same expectation as it develops, and short display summaries. The isolated summarize task compresses existing records without changing facts or consent. Matchy v0.7.0 and runtime v0.7.0 permit preliminary comparisons before full readiness and prioritize consequential follow-up in conversation. Introductions retain the full readiness gate.
 
 Memy v0.5.0 and runtime v0.8.0 enable bounded role-scoped function calling. Memy commits through a tool and observes its receipt before Astrid replies; Astrid may inspect or request matching and create scoped sharing requests. Matchy may inspect records and validate its decision. Existing role prompts retain their voice. The role-only lab/evals do not exercise these application tools.
+
+Memy v0.6.0 classifies substantive topic understanding separately from incidental facts. Matchy v0.8.0 uses seven topic baselines, examines consequential uncertainty, and gives each clarification a purpose (baseline, meaning, practical, flexibility, reciprocity, or repair). Runtime v0.9.0 carries those handoffs and adds a shared-opening task using only information authorized for both recipients. Sixteen facets remain diagnostic guides, not a registration checklist.

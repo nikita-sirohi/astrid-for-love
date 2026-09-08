@@ -16,7 +16,7 @@ export async function configuration() {
   return { key, model: process.env.OPENAI_MODEL || local.OPENAI_MODEL || 'gpt-6-astra' };
 }
 
-export const selectedVersions = Object.freeze({ astrid: '0.8.0', matchy: '0.7.0' });
+export const selectedVersions = Object.freeze({ astrid: '0.8.0', matchy: '0.8.0' });
 
 export async function promptFor(role, version = selectedVersions[role]) {
   if (!['astrid', 'matchy'].includes(role) || !/^\d+\.\d+\.\d+$/.test(version)) {

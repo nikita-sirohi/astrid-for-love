@@ -2,7 +2,7 @@ import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { root } from './runtime.mjs';
-import { facets, facetFor, coverageDetails, safeClarification } from './understanding.mjs';
+import { facets, facetFor, coverageDetails, topicUnderstanding, safeClarification } from './understanding.mjs';
 import { FileMemoryStore } from './memory-store.mjs';
 import { profileFields, profileValue, applyProfileSuggestions } from './profiles.mjs';
 
@@ -18,7 +18,7 @@ function participant(state, id) { const p = state.participants.find(p => p.id ==
 function ownMemory(state, id, owner) { const m = state.memories.find(m => m.id === id && m.participantId === owner && !m.deleted); requireValue(m, 'Memory not found.', 404); return m; }
 function event(state, type, detail) { state.events.push({id:uid('event'),type,detail,createdAt:now()}); state.events = state.events.slice(-300); }
 function message(state, chatId, authorId, role, text) { const m = {id:uid('msg'),chatId,authorId,role,text,createdAt:now()}; state.messages.push(m); return m; }
-export function coverage(state,id) {const details=coverageDetails(state,id);return Object.fromEntries(topics.map(t=>[t.id,facets.filter(f=>f.topic===t.id).every(f=>details[f.id])]));}
+export function coverage(state,id) {return Object.fromEntries(Object.entries(topicUnderstanding(state,id)).map(([topic,detail])=>[topic,detail.status==='understood']));}
 function publicProfile(p) { const {id,name,age,gender,pronouns,location,bio,photo,photoPosition,interests} = p; return {id,name,age,gender,pronouns,location,bio,photo,photoPosition,interests}; }
 function invalidate(state, p, cause, changedTopics=[]) {
   p.revision++;
@@ -67,12 +67,13 @@ export class AstridApp {
   constructor({repository,agents,mode='live',memoryStore}) { this.repo=repository; this.memoryStore=memoryStore||new FileMemoryStore(repository); this.agents=agents; this.mode=mode; this.busy=new Set(); this.workerRunning=false; this.stopped=false; }
   async init() { await this.repo.init(); this.kick(); }
   kick() { if(!this.stopped) { clearTimeout(this.timer); this.timer=setTimeout(()=>this.drain().catch(()=>{}),50); this.timer.unref?.(); } }
-  async close() { this.stopped=true; clearTimeout(this.timer); while(this.workerRunning||this.busy.size||this.browseBusy?.size) await new Promise(done=>setTimeout(done,25)); }
+  async close() { this.stopped=true; clearTimeout(this.timer); while(this.workerRunning||this.busy.size||this.browseBusy?.size||this.introductionRuns?.size) await new Promise(done=>setTimeout(done,25)); }
   async bootstrap(actor) { const s=await this.repo.read(); const visible=p=>!actor||p.id===actor||p.discoverable===true||s.chats.some(c=>c.participantIds.includes(actor)&&c.participantIds.includes(p.id))||s.proposals.some(c=>c.participantIds.includes(actor)&&c.participantIds.includes(p.id)); return {participants:s.participants.filter(visible).map(publicProfile),mode:this.mode,topics,facets,fictional:true}; }
   async view(id) {
     const s=await this.repo.read(); const p=participant(s,id);
-    return {resetId:p.resetId||null,participant:p,memories:this.memoryStore.records(s,id),coverage:coverage(s,id),coverageDetails:coverageDetails(s,id),profileConflicts:p.profileConflicts||[],
+    return {resetId:p.resetId||null,participant:p,memories:this.memoryStore.records(s,id),coverage:coverage(s,id),topicUnderstanding:topicUnderstanding(s,id),coverageDetails:coverageDetails(s,id),profileConflicts:p.profileConflicts||[],
       messages:s.messages.filter(m=>m.chatId===`astrid-${id}`),
+      retryMessageId:(()=>{const latest=s.messages.filter(m=>m.chatId===`astrid-${id}`&&m.authorId===id&&m.role==='user').at(-1);return latest?.turn&&latest.turn.stage!=='completed'&&!this.busy.has(id)?latest.id:null;})(),
       proposals:s.proposals.filter(p=>p.participantIds.includes(id)).map(p=>({...p,introductions:{[id]:p.introductions[id]},other:publicProfile(participant(s,p.participantIds.find(x=>x!==id)))})),
       chats:s.chats.filter(c=>c.participantIds.includes(id)).map(c=>({...c,other:publicProfile(participant(s,c.participantIds.find(x=>x!==id))),messages:s.messages.filter(m=>m.chatId===c.id)})),
       permissions:s.permissions.filter(p=>p.participantId===id),clarifications:s.clarifications.filter(c=>c.participantId===id).map(safeClarification).filter(Boolean),busy:this.busy.has(id)};
@@ -85,13 +86,27 @@ export class AstridApp {
       clarifications:s.clarifications.filter(c=>c.participantId===id&&c.status==='queued').map(safeClarification).filter(Boolean),
       permissionRecipients:s.participants.filter(other=>other.id!==id&&other.discoverable===true&&!eligibility(p,other)).map(publicProfile)};
   }
-  async converse(id,text) {
-    text=textValue(text); requireValue(!this.busy.has(id),'Astrid is already replying. Please wait.',409); this.busy.add(id);
+  async retryTurn(id,messageId) {return this.converse(id,null,{retryMessageId:messageId});}
+  async converse(id,text,{retryMessageId}={}) {
+    if(!retryMessageId)text=textValue(text); requireValue(!this.busy.has(id),'Astrid is already replying. Please wait.',409); this.busy.add(id);
     let input;
     try {
-      input=await this.repo.transact(s=>{participant(s,id).understandingPending=true; return message(s,`astrid-${id}`,id,'user',text);});
+      input=await this.repo.transact(s=>{
+        const p=participant(s,id);
+        if(retryMessageId){
+          const saved=s.messages.find(m=>m.id===retryMessageId&&m.chatId===`astrid-${id}`&&m.authorId===id&&m.role==='user');
+          requireValue(saved?.turn,'Saved turn not found.',404);
+          if(saved.turn.stage==='completed')return saved;
+          requireValue(s.messages.filter(m=>m.chatId===`astrid-${id}`&&m.authorId===id&&m.role==='user').at(-1)?.id===saved.id,'A newer message has already continued this conversation.',409);
+          requireValue(p.revision===(saved.turn.committedRevision??saved.turn.startRevision),'Your understanding changed after this turn. Send a new message to continue with your corrections.',409);
+          saved.turn.status='running';delete saved.turn.error;p.understandingPending=saved.turn.stage==='understanding';return saved;
+        }
+        p.understandingPending=true;const saved=message(s,`astrid-${id}`,id,'user',text);
+        saved.turn={stage:'understanding',status:'running',startRevision:p.revision,receipts:{}};return saved;
+      });
+      if(input.turn.stage==='completed'){const saved=await this.repo.read();return {message:input,reply:saved.messages.find(m=>m.id===input.turn.replyId),memoryUpdates:[]};}
       const s=await this.repo.read(); const revision=participant(s,id).revision;
-      let memoryUpdates;
+      let memoryUpdates=input.turn.stage==='reply'?{updates:[],revision:input.turn.committedRevision}:null;
       const commitUnderstanding=async result=>{
       if(memoryUpdates)return memoryUpdates;
       memoryUpdates=await this.repo.transact(d=>{
@@ -111,11 +126,14 @@ export class AstridApp {
           const priorRevision=p.revision;p.revision++;
           for(const proposal of d.proposals)if(proposal.status==='pending'&&proposal.revisions[id]===priorRevision)proposal.revisions[id]=p.revision;
         }else if(updates.length||profileChanged||clarificationChanged) {invalidate(d,p,'conversation updated understanding');enqueue(d,id);}
+        const saved=d.messages.find(m=>m.id===input.id);requireValue(saved?.turn,'Saved turn no longer exists.',409);
+        saved.turn.stage='reply';saved.turn.committedRevision=p.revision;saved.turn.understanding={gaps:result.gaps||[]};saved.turn.memoryUpdateIds=updates.map(m=>m.id);
         p.understandingPending=false;if(p.matchingDeferred){p.matchingDeferred=false;enqueue(d,id);}
         return {updates,revision:p.revision,profile:clone(p)};
       });return memoryUpdates;};
-      const result=await this.agents.understand({...this.ownContext(s,id),commitUnderstanding});
+      const result=input.turn.stage==='reply'?{...(input.turn.understanding||{gaps:[]}),metadata:input.turn.understandingMetadata}:await this.agents.understand({...this.ownContext(s,id),commitUnderstanding});
       if(!memoryUpdates)await commitUnderstanding(result);
+      if(result.metadata)await this.repo.transact(d=>{const saved=d.messages.find(m=>m.id===input.id);if(saved?.turn)saved.turn.understandingMetadata=result.metadata;});
       const current=await this.repo.read(); const currentRevision=participant(current,id).revision;
       requireValue(currentRevision===memoryUpdates.revision,'Your understanding changed while Memy was recording it. Send another message to continue.',409);
       const understanding={gaps:(result.gaps||[]).filter(g=>topics.some(t=>t.id===g.topic)&&typeof g.reason==='string').slice(0,3)};
@@ -124,8 +142,12 @@ export class AstridApp {
           const latest=await this.repo.read();requireValue(participant(latest,id).revision===currentRevision,'Understanding changed.',409);
           return {profiles:(await this.discover(id)).profiles,clarifications:this.ownContext(latest,id).clarifications};
         },
-        requestMatching:async()=>this.repo.transact(d=>{const p=participant(d,id);requireValue(p.revision===currentRevision&&p.matchingEnabled,'Matching unavailable.',409);const job=enqueue(d,id);this.kick();return {jobId:job.id,status:job.status};}),
-        requestPermission:async request=>this.repo.transact(d=>{requireValue(participant(d,id).revision===currentRevision,'Understanding changed.',409);const permission=this.addPermission(d,id,request);return {id:permission.id,status:permission.status,memoryId:permission.memoryId,recipientId:permission.recipientId};})
+        requestMatching:async()=>this.repo.transact(d=>{const p=participant(d,id);requireValue(p.revision===currentRevision&&p.matchingEnabled,'Matching unavailable.',409);const turn=d.messages.find(m=>m.id===input.id)?.turn;requireValue(turn,'Saved turn not found.',409);
+          if(turn.receipts.matching){const prior=turn.receipts.matching;return {...prior,status:d.jobs.find(j=>j.id===prior.jobId)?.status||prior.status,reused:true};}
+          const job=enqueue(d,id);this.kick();return turn.receipts.matching={jobId:job.id,status:job.status};}),
+        requestPermission:async request=>this.repo.transact(d=>{requireValue(participant(d,id).revision===currentRevision,'Understanding changed.',409);const turn=d.messages.find(m=>m.id===input.id)?.turn;requireValue(turn,'Saved turn not found.',409);const key=`permission:${request.memoryId}:${request.recipientId}`;
+          if(turn.receipts[key])return {...turn.receipts[key],reused:true};
+          const permission=this.addPermission(d,id,request);return turn.receipts[key]={id:permission.id,status:permission.status,memoryId:permission.memoryId,recipientId:permission.recipientId};})
       }});
       return await this.repo.transact(d=>{
         requireValue(participant(d,id).revision===currentRevision,'Your understanding changed while Astrid was replying. Send another message to continue with the updated context.',409);
@@ -135,8 +157,12 @@ export class AstridApp {
         const reply=message(d,`astrid-${id}`,'astrid','assistant',textValue(response.reply));
         reply.metadata=response.metadata;
         reply.understandingMetadata=result.metadata;
+        const saved=d.messages.find(m=>m.id===input.id);saved.turn.stage='completed';saved.turn.status='completed';saved.turn.replyId=reply.id;delete saved.turn.error;
         return {message:input,reply,memoryUpdates:memoryUpdates.updates};
       });
+    } catch(error){
+      if(input)await this.repo.transact(d=>{const saved=d.messages.find(m=>m.id===input.id);if(saved?.turn&&saved.turn.stage!=='completed'){saved.turn.status='failed';saved.turn.error=error instanceof AppError?error.message:'Astrid could not finish this turn. You can retry the saved message.';}});
+      throw error;
     } finally { this.busy.delete(id); this.kick(); }
   }
   async profile(id,patch) {
@@ -202,7 +228,7 @@ export class AstridApp {
   async evaluatePair(s,a,b) {
     const ids=[a.id,b.id];const constraint=eligibility(a,b);
     const known=ids.flatMap(id=>this.memoryStore.records(s,id)).filter(m=>m.kind!=='story');
-    const missing=ids.flatMap(id=>Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).map(([facet])=>({participantId:id,topic:facetFor(facet).topic,facet,evidenceIds:known.filter(m=>m.participantId===id&&m.facet===facet).map(m=>m.id)})));
+    const missing=ids.flatMap(id=>Object.entries(topicUnderstanding(s,id)).filter(([,detail])=>detail.status!=='understood').map(([topic,detail])=>{const record=known.find(m=>m.participantId===id&&m.topic===topic);const facet=record?.facet||facets.find(f=>f.topic===topic).id;return {participantId:id,topic,facet,purpose:'baseline',evidenceIds:known.filter(m=>m.participantId===id&&m.facet===facet).map(m=>m.id)};}));
     const enoughMaterial=ids.every(id=>{
       const confirmed=known.filter(m=>m.participantId===id&&m.status==='confirmed'&&facetFor(m.facet));
       return confirmed.length>=3&&new Set(confirmed.map(m=>facetFor(m.facet).topic)).size>=2;
@@ -214,7 +240,7 @@ export class AstridApp {
     let result;
     if(hardGate)result={decision:'withhold',exploration:'hold',reason:constraint,evidenceIds:[],clarifications:[]};
     else if(phase==='gated')result={decision:'needs_clarification',exploration:'hold',reason:'A little more understanding is needed before comparing this pair.',evidenceIds:[],clarifications:missing.slice(0,2)};
-    else result=await this.agents.review({participants:[a,b],memories:known,phase,missingFacets:missing,previousReviews:s.reviews.filter(r=>ids.every(id=>r.participantIds.includes(id)&&r.revisions?.[id]===participant(s,id).revision)).slice(-4)});
+    else result=await this.agents.review({participants:[a,b],memories:known,phase,missingFacets:ids.flatMap(id=>Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).map(([facet])=>({participantId:id,topic:facetFor(facet).topic,facet,evidenceIds:known.filter(m=>m.participantId===id&&m.facet===facet).map(m=>m.id)}))),previousReviews:s.reviews.filter(r=>ids.every(id=>r.participantIds.includes(id)&&r.revisions?.[id]===participant(s,id).revision)).slice(-4)});
     requireValue(['propose','needs_clarification','withhold'].includes(result.decision),'Invalid matching result.',502);
     requireValue((result.evidenceIds||[]).every(id=>known.some(m=>m.id===id)),'Matching review cited unknown evidence.',502);
     if(phase==='preliminary') {
@@ -233,7 +259,7 @@ export class AstridApp {
     const profiles=s.participants.filter(b=>b.id!==id&&b.discoverable===true&&(!eligibility(a,b)||(a.demoShell&&b.demoShell&&a.matchingEnabled&&b.matchingEnabled&&![a,b].some(p=>Number.isInteger(p.age)&&p.age<18)&&['Only adults can participate.','Dating preferences need clarification.','Distance preferences have not been established.'].includes(eligibility(a,b))))).map(b=>{
       const review=[...s.reviews].reverse().find(r=>[id,b.id].every(x=>r.participantIds.includes(x)&&r.revisions?.[x]===participant(s,x).revision));
       const matchStatus=this.declinedPair(s,[id,b.id])?'hold':review?this.assessmentStatus(review):'unknown';
-      return {...publicProfile(b),matchStatus};
+      return {...publicProfile(b),matchStatus,comparison:{revisions:{[id]:a.revision,[b.id]:b.revision},pending:Boolean(a.understandingPending||b.understandingPending)}};
     }).sort((a,b)=>rank[a.matchStatus]-rank[b.matchStatus]||a.name.localeCompare(b.name));
     return {profiles};
   }
@@ -254,7 +280,7 @@ export class AstridApp {
           for(const c of review.clarifications||[]) {
             const f=facetFor(c.facet);if(!f||f.topic!==c.topic||!ids.includes(c.participantId))continue;
             const evidenceIds=(c.evidenceIds||[]).filter(e=>d.memories.some(m=>m.id===e&&m.participantId===c.participantId&&m.facet===c.facet&&!m.deleted));
-            if(!d.clarifications.some(x=>x.participantId===c.participantId&&x.facet===f.id&&['queued','deferred','declined'].includes(x.status)))d.clarifications.push({id:uid('clarification'),participantId:c.participantId,topic:f.topic,facet:f.id,evidenceIds,memoryRevisions:Object.fromEntries(evidenceIds.map(e=>[e,d.memories.find(m=>m.id===e).revision])),status:'queued',createdAt:now()});
+            if(!d.clarifications.some(x=>x.participantId===c.participantId&&x.facet===f.id&&['queued','deferred','declined'].includes(x.status)))d.clarifications.push({id:uid('clarification'),participantId:c.participantId,topic:f.topic,facet:f.id,purpose:c.purpose||'baseline',evidenceIds,memoryRevisions:Object.fromEntries(evidenceIds.map(e=>[e,d.memories.find(m=>m.id===e).revision])),status:'queued',createdAt:now()});
           }
         });
       }
@@ -263,7 +289,7 @@ export class AstridApp {
       const canRequest=status!=='hold'&&a.discoverable===true&&!existing;
       // Only the actor's own uncertainty goes to Astrid. Other-person concerns and
       // all pair rationale remain private even when they explain the match judgment.
-      let topics=(review.clarifications||[]).filter(c=>c.participantId===id).map(c=>({facet:c.facet,evidenceIds:(c.evidenceIds||[]).filter(e=>s.memories.some(m=>m.id===e&&m.participantId===id&&!m.deleted))}));
+      let topics=(review.clarifications||[]).filter(c=>c.participantId===id).map(c=>({facet:c.facet,purpose:c.purpose||'baseline',evidenceIds:(c.evidenceIds||[]).filter(e=>s.memories.some(m=>m.id===e&&m.participantId===id&&!m.deleted))}));
       if(!topics.length&&status==='hold'&&!this.declinedPair(s,ids))topics=Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).slice(0,2).map(([facet])=>({facet,evidenceIds:[]}));
       const advice=await this.agents.advise({participant:a,memories:this.memoryStore.records(s,id),other:publicProfile(b),shareableMemories:this.sharedMemories(s,otherId,id),assessment:{status,canRequest,topics}});
       await this.repo.transact(d=>{requireValue(ids.every(id=>participant(d,id).revision===revisions[id]&&!participant(d,id).understandingPending),'This understanding changed. Ask Astrid again.',409);d.browseAdvice??=[];d.browseAdvice.push({id:uid('advice'),participantId:id,otherId,reviewId:review.id,revisions,status,topics,text:textValue(advice.text,2400),metadata:advice.metadata,createdAt:now()});});
@@ -275,7 +301,7 @@ export class AstridApp {
       const a=participant(s,id),b=participant(s,otherId);
       const advice=[...(s.browseAdvice||[])].reverse().find(x=>x.participantId===id&&x.otherId===otherId&&x.reviewId===reviewId);
       requireValue(advice&&advice.revisions[id]===a.revision&&advice.revisions[otherId]===b.revision,'Ask Astrid for an updated assessment first.',409);
-      const question=(advice.topics||[]).map(x=>facetFor(x.facet)?.question).find(Boolean);
+      const question=(advice.topics||[]).map(x=>safeClarification(x)?.uncertainty).find(Boolean);
       const text=`About ${b.name}: ${advice.text}${question&&!advice.text.trim().endsWith('?')?'\n\n'+question:''}`;
       const existing=s.messages.find(m=>m.chatId===`astrid-${id}`&&m.adviceId===advice.id);
       if(existing)return {message:existing};
@@ -293,7 +319,7 @@ export class AstridApp {
     const advice=s.browseAdvice?.find(r=>r.participantId===id&&r.otherId===otherId&&r.reviewId===reviewId&&r.status!=='hold');
     requireValue(advice,'Ask Astrid for her take before requesting an introduction.',409);
     requireValue(a.discoverable===true&&b.discoverable===true&&!eligibility(a,b)&&!this.declinedPair(s,ids),'This introduction is not available.',409);
-    requireValue(ids.every(id=>Object.values(coverageDetails(s,id)).every(Boolean)),'We need to understand more before an introduction.',409);
+    requireValue(ids.every(id=>Object.values(coverage(s,id)).every(Boolean)),'We need to understand more before an introduction.',409);
     const current=s.proposals.find(p=>ids.every(id=>p.participantIds.includes(id))&&['pending','introduced'].includes(p.status));
     if(current){const accepted=await this.decision(id,current.id,'accepted');return {proposal:{...accepted.proposal,introductions:{[id]:accepted.proposal.introductions[id]}}};}
     const intros={};
@@ -330,7 +356,7 @@ export class AstridApp {
           const evidenceIds=c.evidenceIds||[];
           if(evidenceIds.some(id=>!d.memories.some(m=>m.id===id&&m.participantId===c.participantId&&m.facet===f.id&&!m.deleted)))continue;
           const memoryRevisions=Object.fromEntries(evidenceIds.map(id=>[id,d.memories.find(m=>m.id===id).revision]));
-          const handoff={participantId:c.participantId,topic:f.topic,facet:f.id,evidenceIds,memoryRevisions};
+          const handoff={participantId:c.participantId,topic:f.topic,facet:f.id,purpose:c.purpose||'baseline',evidenceIds,memoryRevisions};
           review.clarifications.push(handoff);
           if(!d.clarifications.some(x=>x.participantId===c.participantId&&x.facet===f.id&&['queued','deferred','declined'].includes(x.status)))d.clarifications.push({id:uid('clarification'),...handoff,status:'queued',createdAt:now()});
         }
@@ -341,9 +367,46 @@ export class AstridApp {
       });
     }
   }
+  sharedOpeningContext(s,p) {
+    const participants=p.participantIds.map(id=>publicProfile(participant(s,id)));
+    const shareableMemories=p.participantIds.flatMap(owner=>{
+      const other=p.participantIds.find(id=>id!==owner);
+      // The owner already knows their own record; disclosure must be authorized to the other listener.
+      return this.sharedMemories(s,owner,other).map(m=>({id:m.id,participantId:m.participantId,
+        text:m.text,status:m.status,kind:m.kind||'belief',storyType:m.storyType||null,revision:m.revision}));
+    });
+    return {participants,shareableMemories};
+  }
+  async completeIntroduction(proposalId) {
+    this.introductionRuns??=new Map();
+    if(this.introductionRuns.has(proposalId))return this.introductionRuns.get(proposalId);
+    const run=(async()=>{
+      const s=await this.repo.read(),p=s.proposals.find(p=>p.id===proposalId);
+      requireValue(p&&p.status==='pending'&&p.participantIds.every(id=>p.decisions[id]==='accepted'),'This proposal is no longer ready.',409);
+      const context=this.sharedOpeningContext(s,p),snapshot=JSON.stringify(context);
+      const result=this.agents.sharedOpening?await this.agents.sharedOpening(context):{text:`${context.participants[0].name}, meet ${context.participants[1].name}. You both said yes—now, what would make a first afternoon together worth telling a friend about? I’ll leave you two to it.`};
+      const opening=textValue(result.text,2000);
+      return this.repo.transact(d=>{
+        const current=d.proposals.find(item=>item.id===proposalId);
+        requireValue(current&&current.status==='pending'&&current.participantIds.every(id=>current.decisions[id]==='accepted'),'This proposal changed while Astrid was preparing your introduction.',409);
+        requireValue(current.participantIds.every(id=>participant(d,id).revision===p.revisions[id]&&!participant(d,id).understandingPending&&participant(d,id).discoverable===true),'Understanding changed; review this connection again.',409);
+        requireValue(!eligibility(...current.participantIds.map(id=>participant(d,id))),'This pair is no longer eligible.',409);
+        requireValue(JSON.stringify(this.sharedOpeningContext(d,current))===snapshot,'Sharing permissions changed; retry the introduction.',409);
+        const chat={id:uid('chat'),participantIds:current.participantIds,astridPresent:false,createdAt:now(),proposalId:current.id};
+        d.chats.push(chat);current.status='introduced';current.chatId=chat.id;
+        message(d,chat.id,'system','system','Both of you said yes. Astrid joined to introduce you.');
+        message(d,chat.id,'astrid','assistant',opening);
+        message(d,chat.id,'system','system','Astrid left the conversation. This chat is just for the two of you.');
+        event(d,'introduced',`${context.participants.map(p=>p.name).join(' and ')} both accepted.`);
+        return {proposal:current,chat};
+      });
+    })();
+    this.introductionRuns.set(proposalId,run);
+    try{return await run;}finally{this.introductionRuns.delete(proposalId);}
+  }
   async decision(actor,proposalId,decision,feedback) {
     requireValue(['accepted','declined','withdrawn'].includes(decision),'Invalid proposal decision.');
-    return this.repo.transact(s=>{
+    const result=await this.repo.transact(s=>{
       const p=s.proposals.find(p=>p.id===proposalId&&p.participantIds.includes(actor));requireValue(p,'Proposal not found.',404);
       if(p.status==='introduced'&&decision==='accepted')return {proposal:p,chat:s.chats.find(c=>c.id===p.chatId)};
       requireValue(p.status==='pending','This proposal is no longer pending.',409);
@@ -353,19 +416,10 @@ export class AstridApp {
       if(decision==='withdrawn') p.status='withdrawn';
       else {p.decisions[actor]=decision;if(decision==='declined')p.status='declined';}
       if(feedback?.trim())message(s,`astrid-${actor}`,actor,'user',`Private proposal feedback: ${textValue(feedback,1000)}`);
-      let chat;
-      if(p.participantIds.every(id=>p.decisions[id]==='accepted')) {
-        chat={id:uid('chat'),participantIds:p.participantIds,astridPresent:false,createdAt:now(),proposalId:p.id};s.chats.push(chat);p.status='introduced';p.chatId=chat.id;
-        const [a,b]=p.participantIds.map(id=>participant(s,id));
-        message(s,chat.id,'system','system','Both of you said yes. Astrid joined to introduce you.');
-        // Only public interests reach the shared opening. Audience-specific proposal copy is not reused here.
-        const hook=a.interests?.[0]&&b.interests?.[0]?`${a.name}, you mentioned ${a.interests[0].toLowerCase()}; ${b.name}, yours was ${b.interests[0].toLowerCase()}. `:'';
-        message(s,chat.id,'astrid','assistant',`${a.name}, meet ${b.name}. ${hook}What would you each pick for an unhurried first afternoon together? I’ll leave you two to it.`);
-        message(s,chat.id,'system','system','Astrid left the conversation. This chat is just for the two of you.');
-        event(s,'introduced',`${a.name} and ${b.name} both accepted.`);
-      }
-      return {proposal:p,chat};
+      return {proposal:p};
     });
+    if(result.chat||result.proposal.status!=='pending'||!result.proposal.participantIds.every(id=>result.proposal.decisions[id]==='accepted'))return result;
+    return this.completeIntroduction(proposalId);
   }
   async chat(id,actor) {const s=await this.repo.read();const chat=s.chats.find(c=>c.id===id&&c.participantIds.includes(actor));requireValue(chat,'Chat not found.',404);return {chat,messages:s.messages.filter(m=>m.chatId===id)};}
   async chatMessage(id,actor,text) {await this.chat(id,actor);return this.repo.transact(s=>({message:message(s,id,actor,'user',textValue(text))}));}
@@ -377,7 +431,7 @@ export class AstridApp {
   }
   async matchingStatus(id,jobId) {const s=await this.repo.read();const job=s.jobs.find(j=>j.id===jobId&&j.participantId===id);requireValue(job,'Review not found.',404);return {job};}
   async clearProfile(id) {
-    requireValue(!this.busy.has(id)&&!this.workerRunning&&!this.browseBusy?.size,'Wait for the active review or reply before clearing this profile.',409);
+    requireValue(!this.busy.has(id)&&!this.workerRunning&&!this.browseBusy?.size&&!this.introductionRuns?.size,'Wait for the active review or reply before clearing this profile.',409);
     await this.repo.transact(s=>{
       const p=participant(s,id),memoryIds=new Set(s.memories.filter(m=>m.participantId===id).map(m=>m.id));
       const related=x=>x.participantIds?.includes(id);
@@ -395,5 +449,5 @@ export class AstridApp {
       s.events=s.events.filter(e=>!e.detail?.includes(p.name||id)&&!e.detail?.includes(id));
     });return {ok:true};
   }
-  async reset() {requireValue(!this.busy.size&&!this.workerRunning&&!this.browseBusy?.size,'Wait for active conversations and reviews before resetting.',409);await this.repo.reset();return {ok:true};}
+  async reset() {requireValue(!this.busy.size&&!this.workerRunning&&!this.browseBusy?.size&&!this.introductionRuns?.size,'Wait for active conversations and reviews before resetting.',409);await this.repo.reset();return {ok:true};}
 }

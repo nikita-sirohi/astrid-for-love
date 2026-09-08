@@ -36,7 +36,7 @@ Accepted direction. Meaningful changes to participant understanding or preferenc
 
 Flow: save understanding → queue review → check eligibility and baseline → assess candidates → propose, request clarification, or withhold → let Astrid gather missing information → review again when useful information changes.
 
-Implemented with persisted jobs, coalescing of queued reviews, a single in-process worker, pair duplicate suppression, and revision checks before proposal publication. Changes and manual requests trigger work; no periodic scheduler exists. Failed work is visible, and later explicit requests can review again. Clarification creation alone does not trigger an cycle between agents.
+Implemented with persisted jobs, coalescing of queued reviews, a single in-process worker, pair duplicate suppression, and revision checks before proposal publication. Changes and manual requests trigger work; no periodic scheduler exists. Failed work is visible, and later explicit requests can review again. Clarification creation alone does not trigger a cycle between agents.
 
 ## AD-005 — Application code owns consent and access
 
@@ -61,9 +61,10 @@ A separate presenter view exposes concise decision evidence, pending jobs, and l
 Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Selected versions are drafts:
 
 - [Astrid v0.8.0](prompts/astrid/v0.8.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
-- [Matchy v0.6.0](prompts/matchy/v0.6.0.md)
+- [Matchy v0.8.0](prompts/matchy/v0.8.0.md)
+- [Memy v0.6.0](prompts/memy/v0.6.0.md)
 
-See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.5.0](prompts/runtime/v0.5.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.9.0](prompts/runtime/v0.9.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 
@@ -87,7 +88,7 @@ The lab loads explicit prompt/example versions and pins their hashes per session
 
 Streaming deltas are display observations; only a completed final response becomes successful history. Preserve full output items for subsequent turns, including encrypted reasoning content where provided. Use store:false and replay local history. Failed/incomplete attempts remain recorded separately. Errors use bounded safe labels rather than provider response bodies. No automatic retries are performed.
 
-FileSessionStore exposes load/save/lock operations. Saves use temporary files and rename; a per-session exclusive lock prevents concurrent writes. Crash-left locks require manual recovery for now. Credentials live in ignored .env or environment variables; transcripts in ignored .local/. The authorized key was copied locally from the reference project's configuration without introducing a runtime dependency on that checkout. No source was copied.
+FileSessionStore exposes load/save/lock operations. Saves use temporary files and rename; a per-session exclusive lock prevents concurrent writes. Crash-left locks require manual recovery for now. Credentials live in ignored .env or environment variables; transcripts in ignored .local/.
 
 Five offline tests cover stream fragmentation, incomplete results, safe errors, session history/resumption, locking, and prompt assembly. A live three-request gpt-6-astra smoke run passed on 2026-09-08: Astrid continued the story into care expectations; Matchy distinguished uncertain compatibility from a firm conflict. This is limited manual evidence, not a full prompt evaluation. See README.md for commands.
 
@@ -95,7 +96,7 @@ Five offline tests cover stream fragmentation, incomplete results, safe errors, 
 
 Implemented. The HTTP API and JsonFileRepository isolate the browser and agents from file layout. Application routes enforce participant ownership, consent, revisions, and chat membership. This is a replaceable persistence boundary, not a production database service. Each participant has a fixed local port and profiles remain editable; there is no login.
 
-Readiness currently requires a confirmed record in each of 16 facets across seven topics, with no tentative record in that facet. Requirement strength is independent: a confirmed undecided position may be recorded as unknown strength. This mechanical check does not prove the substance of a facet is understood; Matchy must still evaluate consequential uncertainty. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
+Readiness requires substantive confirmed understanding across seven topics. Sixteen facets remain diagnostic guides rather than separate introduction requirements. Memy distinguishes understood, needs-exploration and incidental records; Matchy still evaluates consequential uncertainty even when the topic baseline is met. Requirement strength is independent: a confirmed undecided position may be recorded as unknown strength. Legacy confirmed facet records without a readiness classification retain topic credit; unclassified summaries do not. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
 
 Matchy receives pair-scoped memory. Private Astrid context receives only that person's memory and facet-scoped clarification needs; free-form pair rationale is kept out. Introductions receive public profiles and appropriately authorized details. The shared opening and departure are persisted together after double acceptance. Later connection messages do not go to an agent. Check-ins are private and manually requested; full post-date learning is deferred.
 
@@ -105,7 +106,7 @@ The offline launch command selects scripted responses and exercises state transi
 
 - Authentication, production access control, deployment, notifications, and data lifecycle policy.
 - A database-backed repository and multi-worker job handling when needed.
-- Deliberate reopening of declined/deferred clarification topics and richer participant-authorized handoffs when a fixed semantic question is insufficient.
+- Deliberate reopening of declined/deferred clarification topics and richer participant-authorized handoffs beyond the current purpose vocabulary.
 - Broader attraction and distance preference modeling, proposal expiration, and participant-controlled reopening after decline.
 - Post-date learning and private check-in scheduling.
 - Further ethical boundary examples and live prompt improvements. Existing evals are known regressions, including the two conversation-derived cases; they do not replace long live conversations.
@@ -121,9 +122,9 @@ Memy failure prevents a stale Astrid reply; Astrid failure retains already commi
 
 Each memory is an independently editable belief, with a stable ID, topic, specific facet, user-message evidence, confirmation/strength, revision history, and sharing controls. Multiple beliefs coexist within a topic or facet. `FileMemoryStore` provides scoped list/history and transaction-aware apply/edit operations over the local JSON repository. HTTP list/create/edit/delete/history routes form the app boundary. Keeping memory, participant revision, and stale-proposal changes in one serialized file transaction prevents partial updates; a database adapter can preserve that transaction contract later.
 
-Readiness checks specific facets rather than treating one family fact as the entire family conversation. Missing or tentative facets remain unresolved. Memy must interpret substantive evidence; these guides are not an interview order. Legacy summaries are preserved unclassified instead of receiving invented coverage.
+The original per-facet readiness gate is superseded by the seven-topic baseline in AD-022. Facets still identify concrete expectations and guide follow-up. Legacy summaries are preserved unclassified instead of receiving invented coverage.
 
-Matchy selects a recipient, exact facet, and that recipient’s own evidence IDs. The application derives the uncertainty and completion condition from shared definitions, pins evidence revisions, and excludes private pair reasoning. Memy can close a clarification only using fresh evidence for the requested facet. Unrelated updates no longer close every question in a broad topic. Partial answers remain queued; declined/deferred questions remain suppressed.
+Matchy selects a recipient, exact facet, clarification purpose, and that recipient’s own evidence IDs. The application derives safe uncertainty and completion wording from the purpose and facet, pins evidence revisions, and excludes private pair reasoning. Memy can close a clarification only using fresh evidence for the requested facet. Unrelated updates no longer close every question in a broad topic. Partial answers remain queued; declined/deferred questions remain suppressed.
 
 Explicit latest-user profile facts update the authoritative matching profile before Astrid replies. UI edits lock individual fields; a conflicting new statement requires resolution unless the user explicitly corrects the field. Unresolved conflicts block proposals. Opt-in remains an explicit UI/API decision. Age and location are editable.
 
@@ -131,9 +132,9 @@ Temporary audit reports and evaluation findings are local artifacts, not reposit
 
 ## AD-014: Personal windows and a warm conversation interface (startup generalized in AD-021)
 
-Each participant has a fixed local port; one application process and file-store writer serve all windows. Default ports are Maya4310, Eli4311, Theo4312, Elena4313; a separate operator listener on4314 exposes review/reset tools. Requests on a personal port cannot impersonate a different participant or access operator endpoints. This remains a local demo access model, not production authentication. Browser drafts are independent by origin.
+Each participant has a fixed local port; one application process and file-store writer serve all windows. The initial four-profile fixture used ports 4310–4313, followed by an operator listener on 4314. Current startup creates a configurable number of blank profiles from the selected base port; the next port hosts the operator view (AD-021). Requests on a personal port cannot impersonate a different participant or access operator endpoints. This remains a local demo access model, not production authentication. Browser drafts are independent by origin.
 
-The participant experience has no identity switcher, model/storage badges, demo banners, or operator navigation. Use a clean, cozy storybook chat design with parchment, moss, and sky tones. Astrid has a younger Mediterranean-looking illustrated portrait, clearly distinct from the photographic participants; avoid pink-heart decoration. Memory and profile controls remain accessible without displaying readiness as a score or interview checklist. Technical details belong in operator tools and developer documentation.
+The participant experience has no identity switcher, model/storage badges, demo banners, or operator navigation. Use a clean, cozy storybook chat design with parchment, moss, and sky tones. Astrid has a younger Mediterranean-looking illustrated portrait, distinct from the other fictional illustrated characters; avoid pink-heart decoration. Memory and profile controls remain accessible without displaying readiness as a score or interview checklist. Technical details belong in operator tools and developer documentation.
 
 ## Profile browsing and advisory exploration
 
@@ -150,13 +151,13 @@ Stories require latest-user evidence; recording a possible introduction hook nev
 
 ## Foundation review decisions
 
-Persist `understandingPending` with a new private user message, clear it only after Memy changes commit, and block proposal publication/acceptance while either participant has unresolved extraction. Failed extraction remains recoverable through a subsequent private turn. Reviews encountering pending understanding defer matching until it finishes.
+Persist `understandingPending` with a new private user message, clear it only after Memy changes commit, and block proposal publication/acceptance while either participant has unresolved extraction. Failed extraction is recoverable through the saved-turn retry or a subsequent private turn. Reviews encountering pending understanding defer matching until it finishes.
 
 Maintain current pending proposal acceptances when a turn only adds new private stories; advance their participant revision alongside the context revision, since no compatibility or previously disclosed content changed. Other memory mutations retain conservative invalidation. This is a narrow exception, not a full split of context, compatibility and disclosure versions.
 
 A current-version recipient-specific denial overrides broad shareable status. Model revisions reset general sharing to private; exact-recipient grants remain tied to the prior record revision. Background introductions retain the uncertainty of all authorized memory material. Story edits preserve tentative status unless the owner explicitly confirms it.
 
-Remaining intentional demo limits: readiness is a structural gate over 16 facets rather than a semantic proof; matching order uses disposition buckets, not relative likelihood; clarification questions use fixed recipient-safe facet definitions; the shared-chat opening remains templated; check-ins and retries are manual; full-state local transactions and recent-message windows are not a scalable retrieval system. These do not prevent conversation and personality iteration, but should not be presented as completed production capabilities.
+Remaining intentional demo limits: topic readiness depends on evidence classification and is not a semantic proof; matching order uses disposition buckets, not relative likelihood; handoffs use a constrained set of recipient-safe purposes; check-ins and failed-turn retries are manual; full-state local transactions and recent-message windows are not a scalable retrieval system. These do not prevent conversation and personality iteration, but should not be presented as completed production capabilities.
 
 
 ## AD-018: Earlier private reviews and compact lore
@@ -183,3 +184,17 @@ Astrid can inspect safe match dispositions, queue matching and request exact-rec
 ## AD-021: Configurable fresh profile pools
 
 Startup accepts --profiles (1–12), --store (a JSON file), --port and --mode. New live stores contain blank profiles with stable port identities and reusable generated portraits. Existing stores resume untouched; an explicit conflicting count is rejected. Live and offline defaults use different paths. Mode-tagged stores reject cross-mode startup. This is creation/resumption, not a migration or resize API.
+
+## AD-022: Meaningful baseline and purposeful handoffs
+
+A topic is understood when it has substantive confirmed evidence marked understood by Memy; incidental details and stories do not count. Tentative or explicitly unresolved evidence yields needs-exploration when no understood record exists. An unresolved sibling record does not mechanically erase topic credit: Matchy must judge whether it prevents this particular introduction. The seven-topic gate replaces the sixteen-facet checklist without removing the detailed expectations from review context.
+
+Clarification purpose is one of baseline, meaning, practical, flexibility, reciprocity, or repair. Astrid receives the purpose, facet and revision-pinned own evidence, then chooses natural wording and timing. Private counterpart rationale and model-written handoff prose are not forwarded.
+
+## AD-023: Recovery, fresh assessments, and shared openings
+
+Private user messages persist application-stage progress. Retrying the latest failed turn reuses its message and committed Memy result; matching and permission actions persist receipts alongside their effects. A newer user message or changed participant revision prevents stale recovery. Completed retries return the existing reply. This survives a process restart but does not resume an arbitrary model step or automatically retry provider failures.
+
+Browser assessments carry both participants' revisions and pending-understanding state. Changes on either side evict cached advice; request generations and sequences prevent late responses from restoring stale results after refresh or reset.
+
+Both acceptances persist before Astrid generates a shared opening from public profiles and currently authorized records. Publication rechecks consent, eligibility, revisions and the authorized context. Concurrent attempts coalesce; a failed opening leaves both acceptances available for explicit retry. Chat creation, opening and departure are committed together, and later shared messages never enter agent context.

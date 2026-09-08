@@ -62,7 +62,7 @@ test('advice receives neither counterpart private memories nor private pair rati
   await app.browseAdvice('eli', 'elena');
   assert.ok(!JSON.stringify(received).includes('COUNTERPART PRIVATE STORY'));
   assert.ok(!JSON.stringify(received).includes('PRIVATE PAIR REASON'));
-  assert.deepEqual(received.assessment.topics, [{ facet: 'closeness.time', evidenceIds: ['eli-closeness'] }]);
+  assert.deepEqual(received.assessment.topics, [{ facet: 'closeness.time', purpose: 'baseline', evidenceIds: ['eli-closeness'] }]);
   assert.ok(received.memories.every(memory => memory.participantId === 'eli'));
 });
 
@@ -129,4 +129,17 @@ test('blank fictional shells are previewable but cannot bypass adult eligibility
  await assert.rejects(app.browseInterest('eli','elena',advice.assessment.reviewId),conflict);
  await repository.transact(s=>{s.participants.find(p=>p.id==='elena').age=17;});
  assert.ok(!(await app.discover('eli')).profiles.some(p=>p.id==='elena'));
+});
+
+test('discovery exposes comparison freshness without exposing counterpart memories', async t => {
+  const { app, repository } = await setup(t);
+  const first=(await app.discover('eli')).profiles.find(p=>p.id==='maya');
+  const state=await repository.read();
+  assert.deepEqual(first.comparison.revisions,Object.fromEntries(state.participants.filter(p=>['eli','maya'].includes(p.id)).map(p=>[p.id,p.revision])));
+  assert.equal(first.comparison.pending,false);
+  assert.equal(first.memories,undefined);
+  await repository.transact(s=>{const p=s.participants.find(p=>p.id==='maya');p.revision++;p.understandingPending=true;});
+  const next=(await app.discover('eli')).profiles.find(p=>p.id==='maya');
+  assert.equal(next.comparison.revisions.maya,first.comparison.revisions.maya+1);
+  assert.equal(next.comparison.pending,true);
 });
