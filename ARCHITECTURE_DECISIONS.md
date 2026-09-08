@@ -12,7 +12,7 @@ Accepted. Build a self-contained open-source project with no dependency on anoth
 
 Public fixtures must use fictional participants and redistributable assets. Keep real conversations, local runtime data, and credentials out of version control. Repository license selection is still open.
 
-## AD-002 — Two agent roles
+## AD-002 — Initial two-role plan (superseded by AD-012)
 
 Accepted. Astrid is the conversational agent; Matchy is the background matching agent. No additional agent roles are planned for the demo.
 
@@ -129,7 +129,7 @@ Explicit latest-user profile facts update the authoritative matching profile bef
 
 Temporary audit reports and evaluation findings are local artifacts, not repository documentation. Keep lasting decisions here and in product/protocol/prompt files; keep reusable tests and fixtures in code.
 
-## AD-014: Personal windows and a warm conversation interface
+## AD-014: Personal windows and a warm conversation interface (startup generalized in AD-021)
 
 Each participant has a fixed local port; one application process and file-store writer serve all windows. Default ports are Maya4310, Eli4311, Theo4312, Elena4313; a separate operator listener on4314 exposes review/reset tools. Requests on a personal port cannot impersonate a different participant or access operator endpoints. This remains a local demo access model, not production authentication. Browser drafts are independent by origin.
 
@@ -172,3 +172,14 @@ The composer clears immediately and renders the pending message. Failed requests
 Manual matching refresh polls the owner-scoped persisted job until completion, then reloads candidates and the open assessment. Every profile opens with an explicit provisional explanation even before model advice arrives. The UI uses an accessible refresh icon with progress feedback.
 
 POST /api/participants/:id/clear clears only that participant's identity fields, private history and lore, plus shared chats, consent and matching records involving that person. Other participants' private conversations, profiles and lore are preserved. Portraits and port identities remain; a new name can be entered immediately. Active work prevents reset until it finishes. A per-profile reset marker clears browser drafts and cached assessments in that person's windows. This demo control remains subject to the existing actor scope; authentication is still deferred.
+
+
+## AD-020: Lightweight agents over application capabilities
+
+The live application uses a shared Responses function-calling runner, limited to six model steps, eight tool calls and 120 seconds per run. It replays response items and tool receipts, including encrypted reasoning items, within the run. Unknown tools and invalid arguments cannot execute. Repeated call IDs reuse receipts; conflicting reuse fails. No automatic provider retry or durable mid-run resume is implemented.
+
+Astrid can inspect safe match dispositions, queue matching and request exact-recipient sharing permission. Memy can inspect records/evidence and commit one validated understanding batch before Astrid speaks. A successful commit survives a later model failure. Matchy can inspect relationship records and check a decision against evidence/readiness before returning its final disposition. Pair scheduling and publication remain application-controlled. The runner is intentionally bounded; agents do not repeatedly invoke each other while waiting for people. Successful-run metadata records step count and tool outcomes, not raw tool arguments or private reasoning.
+
+## AD-021: Configurable fresh profile pools
+
+Startup accepts --profiles (1–12), --store (a JSON file), --port and --mode. New live stores contain blank profiles with stable port identities and reusable generated portraits. Existing stores resume untouched; an explicit conflicting count is rejected. Live and offline defaults use different paths. Mode-tagged stores reject cross-mode startup. This is creation/resumption, not a migration or resize API.

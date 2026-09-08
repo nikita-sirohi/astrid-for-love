@@ -1,111 +1,94 @@
 # Astrid for Love
 
-An AI matchmaking friend that learns what being your partner would actually mean, then introduces people with personality and a reason to be excited. This standalone local demo includes private Astrid chat, editable understanding, background Matchy reviews, double opt-in proposals, and connection chats where Astrid makes the introduction and leaves.
+An opinionated AI matchmaking friend that learns what being your partner would actually mean—including the messy expectations—and helps people find a connection worth exploring.
 
-## Run the demo
+Built from scratch for the hackathon on **September 8, 2026**. The repository's application code, prompts, tests, documentation, and generated illustrations were created that day. The app uses OpenAI's API and standard platform capabilities; it has no third-party runtime packages or dependency on another local project.
 
-Requires Node.js 22 or newer. No package installation or build step is needed.
+Astrid's goal is a good introduction, not a longer conversation. She learns through stories, probes meaningful tradeoffs, and checks her understanding. Compatibility stays private; introductions lead with personality and require both people to say yes.
 
-For live Astra conversations, create a local `.env` using `.env.example`, or set `OPENAI_API_KEY` in your environment. The default model is `gpt-6-astra`; the API project needs access. Credentials stay server-side. `.env`, transcripts, and app state under `.local/` are excluded from Git.
+## Start your own demo
+
+Requires **Node.js 22+** and an OpenAI API key with access to **gpt-6-astra**. There is no install or build step.
+
+Copy `.env.example` to `.env` and set `OPENAI_API_KEY`, or supply it as an environment variable. Never commit your key or conversation data.
 
 ```sh
-npm start
+npm start -- --profiles 4 --store .local/my-demo/state.json --port 4310
 ```
 
-Open each person in their own browser window: [Maya](http://127.0.0.1:4310), [Eli](http://127.0.0.1:4311), [Theo](http://127.0.0.1:4312), and [Elena](http://127.0.0.1:4313). Each port stays with that person; all windows share matching and connection state. Operator controls live separately at [port 4314](http://127.0.0.1:4314/?view=presenter). Follow the [walkthrough](DEMO_WALKTHROUGH.md) for the lifecycle and alternative branches.
+This creates four empty profiles sharing one local JSON store. Each gets a separate browser address, printed at startup: ports 4310–4313 in this example. The next port hosts the operator view. Open the profile windows you want to use, enter a name, and start talking to Astrid. Four reusable illustrated portraits are provided; larger pools reuse them.
 
-For a repeatable walkthrough without a key or network:
+- `--profiles N`: create 1–12 profiles in a **new** store. Existing stores must have the same count; they are never resized or reset by this option.
+- `--store PATH`: local JSON file for profiles, chat, memory, matching and consent. Relative paths resolve from the working directory. `ASTRID_STORE` is the environment-variable equivalent.
+- `--port N`: first listening port; the remaining profile and operator ports are consecutive. `PORT` is also supported.
+- `--mode live|offline`: live Astra calls or explicitly scripted responses. `ASTRID_MODE` is also supported.
+
+To resume, use the same file:
+
+```sh
+npm start -- --store .local/my-demo/state.json --port 4310
+```
+
+Without options, live mode resumes `.local/app/state.json` or creates four empty profiles there. **Your lore → Clear all** resets only the current profile and its connections; other people's private conversations and lore remain. This lets a demo mix established profiles with fresh arrivals.
+
+For a prepared, repeatable lifecycle without API usage:
 
 ```sh
 npm run demo:offline
 ```
 
-The offline command uses scripted agent responses; the personal interface stays visually identical to live mode. It exercises real application state and consent rules; it is not evidence of model performance. Stop one server before starting another. Both modes use the same default app store; reset the fictional demo when changing modes for a clean run.
+Offline mode uses a separate default store, `.local/offline/state.json`, and prepared fictional records. It validates application behavior, not model quality. Stores opened by the server are marked with their mode to prevent accidentally mixing scripted and live runs.
 
-One process binds to `127.0.0.1` on ports 4310–4314 (or consecutively from `PORT`). Participant ports enforce a fixed identity and exclude operator endpoints; these local windows are not production authentication. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
+## What makes it agentic
 
-Start in Eli’s window: select Elena in Your potential plot twists to see her illustrated portrait and Astrid’s assessment, then express interest. Elena must separately accept before a shared chat opens. Live assessments can vary; the offline pool demonstrates an ordinary planning-versus-spontaneity uncertainty. Maya demonstrates a hold while baseline understanding is incomplete. Browse smoke state is isolated under `.local/browse-smoke/`.
+Three specialists share a small, bounded tool-use runner:
 
-## What is implemented
+- **Astrid** owns the conversation. She can inspect participant-safe match results, request a background review, and ask permission to share a specific memory with a specific person.
+- **Memy** owns understanding. It can inspect current records and user evidence, then commit concise learnings and explicit profile facts. Astrid sees the committed result before replying.
+- **Matchy** owns the compatibility judgment for an assigned pair. It can inspect relationship records, check a proposed decision against application constraints, and return a proposal, consequential clarification, or hold.
 
-- Private participant–Astrid conversations with separate evidence-backed beliefs, grouped into seven areas. Each record has its own uncertainty, requirement strength, sharing controls, and revision history.
-- Explicit profile editing for age, gender, pronouns, location, attraction preferences, age range, biography, and matching opt-in. Memy also records explicitly stated profile facts from conversation. Conflicts with user-edited fields block matching until resolved; conversation never infers matching opt-in.
-- Persisted matching jobs triggered by understanding/profile changes or a manual review; Matchy can propose, ask for clarification, or withhold a match.
-- Photos and personalized proposal copy; two current acceptances are required before opening a connection chat.
-- An opening, nudge, and visible Astrid departure. Subsequent shared messages are not sent to an agent. A participant can request a private check-in.
-- Participant-specific sharing permission requests, memory revision checks, and application enforcement of consent and chat membership.
+Agents can call tools, observe results, and choose another step. Each run permits at most six model calls and eight tool calls within a 120-second deadline. Tools are scoped by role; the model cannot select an arbitrary person's private data. The application schedules matching work and enforces eligibility, revisions, sharing permissions and double opt-in. Successful runs record tool names, outcomes and prompt versions for inspection.
 
-This is a single-process file-backed demo. The interface is an eccentric illustrated singles clubhouse, with a fallen Cupid, fictional partygoers, and Astrid as its opinionated host. Technical status and operator controls stay outside personal conversations. The browser displays completed replies with a typing state; token streaming is available in the separate CLI lab. There is no authentication, periodic matching scheduler, production notification system, or full post-date learning workflow. Simple coverage and eligibility checks are demo approximations, not proof of compatibility.
+## Show the lifecycle
 
-## Keep testing the prompts
+1. Talk to Astrid and watch concise, editable **lore** appear.
+2. Explore **potential plot twists**. Early comparisons identify useful questions before the full introduction baseline is complete.
+3. Correct a preference or establish a boundary and see matching reconsider it.
+4. View a photo and personalized introduction proposal. One acceptance stays pending; two open a shared chat.
+5. Astrid introduces the pair and leaves. Further shared messages are not sent to any agent; check-ins happen privately.
 
-The prompt lab remains independent of the app:
-
-```sh
-npm run chat -- --session first-conversation
-npm run chat -- --role matchy --session review-one --file fixtures/matchy-review.txt
-```
-
-Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.8.0 with conversation examples v0.3.0, and Matchy v0.6.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
+The [walkthrough](DEMO_WALKTHROUGH.md) contains prepared scenarios for repeatable consent and compatibility branches.
 
 ## Validate
 
 ```sh
 npm test
 node src/demo-smoke.mjs
-node src/demo-smoke.mjs --live
 node src/browse-smoke.mjs
-node src/browse-smoke.mjs --live
-npm run eval
-npm run eval -- --suite live-regressions
 ```
 
-Tests and the default demo smoke use offline responses. `--live` exercises real conversation, matching, introductions, and a private check-in, incurring API usage. Smoke runs create isolated local state under `.local/demo-smoke/` and do not reset the running demo. The original `npm run smoke` remains a three-request prompt-lab connectivity check.
-
-The default evaluation suite makes 21 requests across ten cases. The live-development regression suite makes six requests across two fictional cases. Both require manual rubric review; successful requests do not establish behavioral quality. See [evaluation methodology](evals/README.md). Live long conversations remain necessary for pacing and voice.
-
-Keep run outputs and temporary findings under ignored `.local/`; commit reusable test fixtures, prompts, and lasting product/architecture decisions.
-
-## Persistence and recovery
-
-The app stores state in `.local/app/state.json`, using serialized transactions and temporary-file rename. `FileMemoryStore` exposes scoped reads, revisions, and writes through that repository; the HTTP API exposes listing, creation, editing, deletion, and history. Memory changes share the same atomic commit as profile revisions and consent invalidation. Legacy records remain readable without guessed facets; unclassified records do not satisfy readiness until clarified or edited. Reset only when you want fresh fictional demo data. Pending jobs survive restart; interrupted running jobs are requeued. The server uses an exclusive `.server.lock` to prevent two processes writing the same app store. After a crash, confirm that the old process has exited before removing a stale lock. This is not a distributed database or worker system.
-
-The CLI stores sessions separately in `.local/sessions/`, including transcripts, response continuation items, prompt metadata, usage, and safe attempt status. It uses per-session locks. Failed or incomplete turns do not become successful history, and no automatic provider retries occur. App conversation messages remain visible if the provider fails. Error messages do not expose raw provider bodies or credentials.
-
-Requests use the Responses API with `store: false`; this does not itself guarantee zero provider retention. Resetting the fictional app leaves prompt-lab sessions intact. Editing or removing app memory supersedes it in future context without rewriting historical chat messages; it is not physical transcript erasure.
-
-## Repository map
-
-- [Product vision](PRODUCT_VISION.md), [architecture decisions](ARCHITECTURE_DECISIONS.md), [agent protocol](AGENT_PROTOCOL.md), and [implemented API contract](IMPLEMENTATION_CONTRACT.md).
-- [Versioned prompts](prompts/README.md) and [evaluation fixtures](evals/README.md).
-- `src/domain.mjs`: transactional file repository, consent, proposals, and jobs.
-- `src/memory-store.mjs`: scoped memory store API, independent records and revision history; `src/understanding.mjs`: specific questions and completion criteria.
-- `src/agents.mjs`: scoped agent contexts and structured Astra responses.
-- `src/server.mjs`: local HTTP API and static UI serving; `web/`: browser interface.
-- `src/runtime.mjs` and `src/cli.mjs`: streaming prompt laboratory.
-- `fixtures/demo.json`: fictional participant pool; [portrait provenance](web/assets/portraits/README.md).
-
-The application is self-contained. Repository license selection remains open.
-
-## Try the Memy conversation loop
-
-The loop is **user → Memy → committed understanding/profile → Astrid**. Memy records individual beliefs and flags consequential gaps; Astrid owns the conversation. Matching runs separately.
-
-For a fresh personal conversation through this same loop, without fictional profile memories:
+These checks use isolated stores and scripted responses. Add `--live` to either smoke command to test the real model; API usage applies. They never reset a running demo.
 
 ```sh
-npm run chat:memy -- --session first-memy-conversation --message "Hi"
+npm run eval
+npm run eval -- --suite live-regressions
+npm run chat:memy -- --session fresh-conversation --message "Hi"
 ```
 
-Reuse the session ID for later messages, or pass `--file PATH`. State stays under ignored `.local/memy-sessions/`; matching is disabled in this personal lab. The original `npm run chat` remains the single-agent comparison laboratory. Restart an existing web server to load the new architecture.
+The eval suites test role behavior and require manual rubric review. They do not replace tool-loop tests or live conversation testing. The Memy chat command exercises the application conversation loop in a separate personal store. See [prompt versions](prompts/README.md) and [evaluation methodology](evals/README.md).
 
-Live startup/reset now uses `fixtures/people.json`: illustrated character shells with no invented ages, attraction preferences, biographies, interests, or relationship memories. Learn those from actual conversations. Explicitly scripted offline mode and automated tests retain `fixtures/demo.json` for repeatable branches. The local character shells may be browsed while basics are unknown; introductions remain blocked by normal eligibility and readiness checks.
+## Demo boundaries
 
-**Your lore** displays actual understanding. **Your potential plot twists** is a scrollable inline list ordered by fresh review disposition: promising, exploratory, unassessed, then held, with alphabetical ties and no invented probabilities. Selecting a person opens an inline assessment. **Talk it through with Astrid** persists that private explanation and a concrete own-expectation question in the Astrid chat; it does not fabricate a user message or memory.
+This is a local, single-process application. Listener ports identify profiles for demonstration; they are **not authentication**. The store serializes transactions and replaces files atomically. An exclusive server lock prevents concurrent writers. After an unclean shutdown, confirm the previous process is gone before removing its stale `.server.lock`. Interrupted matching jobs are requeued on restart; provider calls are not automatically retried.
 
+Matching readiness uses 16 semantic facets and conservative age, attraction and location checks. These are approximations, not proof of compatibility. Matchy investigates one pair at a time; there is no autonomous pool-wide planner. Shared-chat openings are templated, replies are not streamed in the browser, and full post-date learning and production notifications are deferred.
 
-Story memory uses Memy v0.3.0 and runtime v0.6.0. Distinct passions, anecdotes, and humor are stored as private evidence-backed story records before Astrid replies. They appear in Your lore with creation/edit/removal controls and explicit uncertainty. Authorized stories may enrich introduction proposals; stories never satisfy readiness or become Matchy compatibility evidence.
+Memory deletion stops future use but does not erase historical transcripts. Requests use `store: false`; this is not a claim of zero provider retention. Keep custom storage targets outside tracked source files; `.env` and `.local/` are ignored by Git. An open-source license has not yet been selected.
 
-An unprocessed private turn now blocks new proposal publication and acceptance until understanding succeeds. This marker survives a failed extraction/restart; continuing the private conversation retries understanding with retained history. New private stories preserve pending acceptances because they do not change compatibility or disclosed material. Corrections to existing records remain conservative and can stale proposals. Recipient-specific denial overrides general sharing; a model revision returns previously shareable content to private pending renewed authorization.
+## Architecture
 
-To start one person fresh, open **Your lore → Clear all** in that person's window. This resets that profile's name, preferences, lore and chats, including connections involving them. Other people's private conversations and lore remain. The same window then asks for a new name. Use this to keep some profiles established while others start fresh.
+- [Product vision](PRODUCT_VISION.md), [architecture decisions](ARCHITECTURE_DECISIONS.md), [agent protocol](AGENT_PROTOCOL.md), [API contract](IMPLEMENTATION_CONTRACT.md).
+- `src/agent-runner.mjs`: bounded tool execution; `src/agents.mjs`: role contexts, schemas and provider adapter.
+- `src/domain.mjs`: application rules and transactional repository; `src/memory-store.mjs`: scoped memory operations.
+- `src/server.mjs`, `src/startup.mjs`: local API, profile listeners and configuration; `web/`: browser interface.
+- `src/runtime.mjs`, `src/cli.mjs`: separate streaming prompt laboratory.

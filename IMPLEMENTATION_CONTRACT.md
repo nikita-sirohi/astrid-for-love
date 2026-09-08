@@ -83,3 +83,10 @@ Story IDs support the same private listing, revision history, edit/delete locks,
 Participant `understandingPending` is persisted before Memy runs and cleared with successful understanding commit. Proposal publication and acceptance reject pending participants, including after extraction failure. `matchingDeferred` requeues a review skipped during extraction. Only newly added private stories may advance pending proposal revisions without discarding acceptances; other updates use existing invalidation.
 
 A current-recipient/current-memory-revision denied permission wins over `sharing: shareable`. Automatic memory revisions reset sharing to private. Introduction contexts preserve status. The story editor exposes explicit tentative/confirmed status and supports new story creation through the existing memory POST endpoint.
+
+
+## Agent execution and startup
+
+Live role tasks support scoped Responses function calls with six model steps, eight tool calls and a 120-second run budget. Memy can atomically commit before returning; Astrid can request matching or sharing permission and inspect safe match state. Matchy can inspect records and test its final disposition; application code still controls pair scheduling and publication. Successful metadata includes steps and toolTrace. Prompt-only CLI evaluations remain separate.
+
+Startup accepts --profiles N, --store PATH, --port N and --mode live|offline. Counts initialize new stores only; incompatible existing counts/modes fail. Fresh profiles ask for a name and contain no invented compatibility facts. GET /api/participants/:id/matching/:jobId returns an owner-scoped job; POST /api/participants/:id/clear resets that participant and related connections; POST /api/participants/:id/lore/refresh compresses existing own memory for display without changing facts or revisions.

@@ -1,3 +1,4 @@
+import {startupOptions,freshProfiles} from './startup.mjs';
 import http from 'node:http';
 import { readFile, realpath, open, unlink, mkdir } from 'node:fs/promises';
 import { extname, resolve, sep, dirname } from 'node:path';
@@ -76,14 +77,16 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
   });
 }
 
-export async function start({port=Number(process.env.PORT||4310),mode=process.env.ASTRID_MODE||'live',file}={}) {
+export async function start({port=Number(process.env.PORT||4310),mode=process.env.ASTRID_MODE||'live',file,profileCount}={}) {
   if(!['live','offline'].includes(mode))throw new Error('ASTRID_MODE must be live or offline.');
-  const repository=new JsonFileRepository(file,resolve(root,mode==='live'?'fixtures/people.json':'fixtures/demo.json'));const app=new AstridApp({repository,agents:createAgents({mode}),mode});
+  if(profileCount!==undefined&&(!Number.isInteger(profileCount)||profileCount<1||profileCount>12))throw Error('Profiles must be an integer between 1 and 12.');
+  if(!Number.isInteger(port)||port<0||port>65534)throw Error('Invalid port.');
+  const repository=new JsonFileRepository(resolve(file||process.env.ASTRID_STORE||resolve(root,mode==='live'?'.local/app/state.json':'.local/offline/state.json')),mode==='offline'&&profileCount===undefined?resolve(root,'fixtures/demo.json'):freshProfiles(profileCount??4));const app=new AstridApp({repository,agents:createAgents({mode}),mode});
   // One writer process per app store. Stale locks require deliberate operator recovery.
   await mkdir(dirname(repository.file),{recursive:true,mode:0o700});const lockPath=repository.file+'.server.lock';let lock;
   try {lock=await open(lockPath,'wx',0o600);}catch {throw new Error('App store is already locked. Stop the other server, or remove its stale .server.lock after confirming that process exited.');}
   await lock.writeFile(String(process.pid));
-  try {await repository.init();} catch(error){await lock.close();await unlink(lockPath);throw error;}
+  try {await repository.init();const saved=await repository.read();if(profileCount!==undefined&&saved.participants.length!==profileCount)throw Error('This store has a different profile count. Resume without --profiles or use a new --store path; no profiles were replaced.');if(port&&port+saved.participants.length>65535)throw Error('Not enough consecutive ports for these profiles.');if(saved.runtimeMode&&saved.runtimeMode!==mode)throw Error('This store belongs to a different mode. Use its original mode or a different --store path.');await repository.transact(s=>{s.runtimeMode=mode;});} catch(error){await lock.close();await unlink(lockPath);throw error;}
   app.kick();
   const people=(await repository.read()).participants;
   const servers=[];const addresses=[];
@@ -95,7 +98,7 @@ export async function start({port=Number(process.env.PORT||4310),mode=process.en
       const server=createServer(app,{participantId:person?.id||null,allowPresenter:!person});
       server.requestTimeout=300000;servers.push(server);
       await new Promise((yes,no)=>{server.once('error',no);server.listen(port===0?0:port+index,'127.0.0.1',yes);});
-      const address={participantId:person?.id||null,name:person?.name||'Operator',port:server.address().port};addresses.push(address);
+      const address={participantId:person?.id||null,name:person?(person.name||`Profile ${index+1}`):'Operator',port:server.address().port};addresses.push(address);
       console.log(`${address.name} · http://127.0.0.1:${address.port}${person?'':'/?view=presenter'}`);
     }
   } catch(error){const drained=stopListeners();await app.close();await drained;await lock.close();await unlink(lockPath);throw error;}
@@ -105,6 +108,6 @@ export async function start({port=Number(process.env.PORT||4310),mode=process.en
 
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
-  try {const running=await start();let closing=false;const close=async()=>{if(closing)return;closing=true;await running.close();process.exit(0);};process.on('SIGINT',close);process.on('SIGTERM',close);}
+  try {const options=startupOptions();if(options.help){console.log('npm start -- [--profiles 1..12] [--store /path/state.json] [--port 4310] [--mode live|offline]\nNew live stores start with empty profiles. Existing stores resume without replacing people.');process.exit(0);}const running=await start(options);let closing=false;const close=async()=>{if(closing)return;closing=true;await running.close();process.exit(0);};process.on('SIGINT',close);process.on('SIGTERM',close);}
   catch(error){console.error(error.message);process.exitCode=1;}
 }

@@ -106,3 +106,8 @@ Memy v0.3.0 adds separate story suggestions, each supported by fresh own user ev
 Review input includes phase (preliminary/full) and missingFacets. A preliminary review tests promising compatibility hypotheses and returns consequential own-facet clarifications; the application forces exploration=hold and disallows proposals until full readiness. Astrid gives relevant queued clarification priority once the current expectation and its meaningful limits are understood. Clarification wording remains derived from semantic facets; private pair reasoning is never forwarded.
 
 Memy understanding records include nullable summary, a display phrase of at most 110 characters. Its separate summarize task receives only the owner's current records and returns one {id,summary} per record. Source text, strength, evidence, uncertainty and consent are not rewritten by this task.
+
+
+### Bounded tool runs
+
+The application assigns a task and provides capabilities through closures scoped to its current participant or pair. The model can inspect tool results and choose subsequent actions within a six-step/eight-call deadline-bounded run. Memy's commit_understanding is validated and persisted before the receipt is returned; one batch per turn prevents partial multi-write understanding. Astrid tools inspect_matches, request_matching and request_sharing_permission return safe results only. Matchy's inspect_records and check_review stay private to the assigned pair. Final review publication still rechecks revisions, readiness and consent. No tool grants consent, reads shared chats, or accesses arbitrary participant state.

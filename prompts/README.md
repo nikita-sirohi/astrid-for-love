@@ -51,10 +51,12 @@ Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 remov
 
 ## Current application contracts
 
-Astrid v0.8.0, Memy v0.4.0, Matchy v0.7.0, runtime v0.7.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
+Astrid v0.8.0, Memy v0.5.0, Matchy v0.7.0, runtime v0.8.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
 
 Matchy v0.6.0 distinguishes ordinary uncertainty that permits exploration from firm conflicts and incomplete baselines that hold introductions. Runtime v0.4.0 adds Astrid’s participant-safe browsing advice task; it receives public profile information, authorized stories, and recipient-owned discussion topics, never the private pair rationale.
 
 Memy v0.3.0 adds a separate evidence-backed stories output for passions, anecdotes, and humor. Story records remain private and independent of readiness. Runtime v0.6.0 lets Astrid use own stories naturally and only authorized stories in introductions. Existing role examples remain unchanged.
 
 Memy v0.4.0 asks for concise atomic learnings, revision of the same expectation as it develops, and short display summaries. The isolated summarize task compresses existing records without changing facts or consent. Matchy v0.7.0 and runtime v0.7.0 permit preliminary comparisons before full readiness and prioritize consequential follow-up in conversation. Introductions retain the full readiness gate.
+
+Memy v0.5.0 and runtime v0.8.0 enable bounded role-scoped function calling. Memy commits through a tool and observes its receipt before Astrid replies; Astrid may inspect or request matching and create scoped sharing requests. Matchy may inspect records and validate its decision. Existing role prompts retain their voice. The role-only lab/evals do not exercise these application tools.

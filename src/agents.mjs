@@ -1,3 +1,4 @@
+import { runAgent } from './agent-runner.mjs';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { storyTypes } from './memory-store.mjs';
@@ -43,7 +44,7 @@ function validate(value, schema) {
     && (!schema.minLength || value.trim().length >= schema.minLength) && (!schema.maxLength || value.length <= schema.maxLength);
 }
 
-export async function applicationPrompt(role, version = role === 'memy' ? '0.4.0' : selectedVersions[role]) {
+export async function applicationPrompt(role, version = role === 'memy' ? '0.5.0' : selectedVersions[role]) {
   if (role === 'memy') {
     if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid Memy prompt version.');
     const file = `memy/v${version}.md`;
@@ -56,28 +57,30 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.4.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.7.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.8.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.7.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.8.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
-export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
+export async function structuredResponse({ key, model, instructions, input, schema, task, tools = [], fetchImpl = fetch, timeoutMs = 120000 }) {
   try {
     const response = await fetchImpl('https://api.openai.com/v1/responses', {
       method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
       signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({ model, instructions, input, store: false, stream: false,
         reasoning: { effort: 'low' }, max_output_tokens: 6000,
+        ...(tools.length?{tools,parallel_tool_calls:false,include:['reasoning.encrypted_content']}:{}),
         text: { format: { type: 'json_schema', name: `astrid_${task}`, strict: true, schema } } }),
     });
     if (!response.ok) throw new Error(`API HTTP ${response.status}`);
     const body = await response.json();
     if (body.status !== 'completed') throw new Error('Agent response incomplete.');
-    if (!Array.isArray(body.output) || body.output.some(item => !['message', 'reasoning'].includes(item.type))) throw new Error('Invalid agent response.');
+    if (!Array.isArray(body.output) || body.output.some(item => !['message', 'reasoning', ...(tools.length?['function_call']:[])].includes(item.type))) throw new Error('Invalid agent response.');
+    if(body.output.some(item=>item.type==='function_call'))return {output:body.output,id:body.id,model:body.model,usage:body.usage};
     const content = body.output.filter(item => item.type === 'message').flatMap(item => item.content || []);
     if (content.some(item => item.type !== 'output_text')) throw new Error('Invalid agent response.');
     const data = JSON.parse(content.map(item => item.text).join(''));
-    return { data, id: body.id, model: body.model, usage: body.usage };
+    return { data, output:body.output, id: body.id, model: body.model, usage: body.usage };
   } catch (error) {
     const message = /^(API HTTP \d{3}|Agent response incomplete\.|Invalid agent response\.)$/.test(error.message) ? error.message : 'Agent request failed or timed out.';
     throw new Error(message);
@@ -248,7 +251,7 @@ function scripted(task, context) {
 
 export function createAgents({ mode = 'live', client = structuredResponse, config, versions = selectedVersions, timeoutMs = 120000 } = {}) {
   if (!['live', 'offline'].includes(mode)) throw new Error('Unknown agent mode.');
-  const promptVersions = { ...selectedVersions, memy: '0.4.0', ...versions };
+  const promptVersions = { ...selectedVersions, memy: '0.5.0', ...versions };
   async function run(task, args) {
     const context = contextFor(task, args);
     const role = task === 'review' ? 'matchy' : ['understand','summarize'].includes(task) ? 'memy' : 'astrid';
@@ -259,8 +262,34 @@ export function createAgents({ mode = 'live', client = structuredResponse, confi
     else {
       try {
         const settings = config || await configuration();
-        result = await client({ ...settings, instructions: prompt.instructions,
-          input: [{ role: 'user', content: JSON.stringify({ task, context }) }], schema: schemas[task], task, timeoutMs });
+        const capabilities=[];let committed;
+        const add=(name,description,parameters,execute)=>capabilities.push({name,description,parameters,execute});
+        if(['understand','review','converse'].includes(task)) {
+          add('inspect_records','Inspect current authorized records in one facet, or all. Returns full evidence-backed records; never other private conversations.',object({facet:enumeration(['all',...facets.map(f=>f.id)])}),async({facet})=>context.memories.filter(m=>facet==='all'||m.facet===facet));
+        }
+        if(task==='understand') {
+          add('inspect_evidence','Read supplied own user evidence by message IDs. Assistant statements are not evidence.',object({messageIds:array(string,40)}),async({messageIds})=>{const found=context.messages.filter(m=>messageIds.includes(m.id)&&m.role==='user');if(found.length!==new Set(messageIds).size)throw Error('Evidence unavailable');return found;});
+          if(args.commitUnderstanding)add('commit_understanding','Validate and atomically save this turn’s key learnings, profile facts and clarification updates. Call once, including for no changes. Inspect the receipt before finishing.',schemas.understand,async data=>{
+            if(committed){if(committed.signature!==JSON.stringify(data))throw Error('Already committed');return committed.receipt;}
+            const signature=JSON.stringify(data);validateReferences(task,data,context);const receipt=await args.commitUnderstanding(data);committed={signature,data:structuredClone(data),receipt};
+            if(receipt.updates)context.memories=[...context.memories.filter(m=>!receipt.updates.some(u=>u.id===m.id)),...receipt.updates.map(cleanMemory)];
+            if(receipt.profile)context.participant=ownProfile(receipt.profile);
+            return {...receipt,...(receipt.profile?{profile:ownProfile(receipt.profile)}:{})};
+          });
+        }
+        if(task==='review')add('check_review','Check your proposed disposition against evidence and readiness before finalizing. This does not publish a proposal or grant consent.',schemas.review,async data=>{validateReferences(task,data,context);if(context.phase==='preliminary'&&(data.decision==='propose'||data.exploration!=='hold'))return {accepted:false,reason:'Preliminary review can clarify or withhold, never introduce.'};return {accepted:true,publication:'The application will recheck current revisions and consent before applying your final decision.'};});
+        if(task==='converse'&&args.actions){
+          let matchingReceipt;
+          add('inspect_matches','Read current participant-safe match dispositions and your own clarification topics. No private counterpart rationale.',object({}),async()=>args.actions.inspectMatches());
+          add('request_matching','Queue a fresh background matching review when useful. A queued review is not a match or introduction.',object({}),async()=>matchingReceipt??=(await args.actions.requestMatching()));
+          add('request_sharing_permission','Create an exact-recipient permission request for one of your supplied memories. This asks; it does not grant permission.',object({memoryId:string,recipientId:string}),async request=>{validateReferences('converse',{reply:'Permission request',permissions:[request]},context);return args.actions.requestPermission(request);});
+        }
+        result = await runAgent({input:[{role:'user',content:JSON.stringify({task,context})}],tools:capabilities,validate,timeoutMs,
+          // Custom single-response adapters remain usable for isolated schema tests.
+          acceptFinal:r=>!args.commitUnderstanding||!r.output||!!committed,
+          request:options=>client({...settings,instructions:prompt.instructions,schema:schemas[task],task,...options})});
+        if(committed)result.data=committed.data;
+
       } catch (error) {
         throw new Error(/^(API HTTP \d{3}|Agent response incomplete\.|Invalid agent response\.)$/.test(error.message) ? error.message : 'Agent request failed or timed out.');
       }
@@ -271,7 +300,7 @@ export function createAgents({ mode = 'live', client = structuredResponse, confi
     validateReferences(task, result.data, context);
     return { ...result.data, metadata: { mode, model: result.model || config?.model || 'gpt-6-astra',
       prompt: { role, version: promptVersions[role], hash: prompt.hash, assets: prompt.assets }, task,
-      responseId: result.id || null, usage: result.usage || null, durationMs: Date.now() - started,
+      responseId: result.id || null, steps:result.steps||1, toolTrace:result.trace||[], usage: result.usage || null, durationMs: Date.now() - started,
       ...(mode === 'offline' ? { label: 'Scripted demo — not model output' } : {}) } };
   }
   return Object.fromEntries(Object.keys(schemas).map(task => [task, args => run(task, args)]));

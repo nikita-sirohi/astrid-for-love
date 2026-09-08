@@ -53,7 +53,7 @@ export class JsonFileRepository {
     requireValue([1,2].includes(this.state.schemaVersion),'Unsupported local store version.',500);
     await this.transact(s=>{s.schemaVersion=2;for(const m of s.memories){m.history??=[];m.facet??=null;}for(const c of s.clarifications)if(!facetFor(c.facet))c.status='obsolete';for(const j of s.jobs) if(j.status==='running') j.status='queued';});
   }
-  async seed() { const state=JSON.parse(await readFile(this.fixture,'utf8'));state.schemaVersion=2;return state; }
+  async seed() { const state=typeof this.fixture==='object'?clone(this.fixture):JSON.parse(await readFile(this.fixture,'utf8'));state.schemaVersion=2;return state; }
   async persist(state) { const temp=`${this.file}.${randomUUID()}.tmp`; await writeFile(temp,JSON.stringify(state,null,2)+'\n',{mode:0o600}); await rename(temp,this.file); }
   async read() { await this.chain; return clone(this.state); }
   async transact(fn) {
@@ -91,8 +91,10 @@ export class AstridApp {
     try {
       input=await this.repo.transact(s=>{participant(s,id).understandingPending=true; return message(s,`astrid-${id}`,id,'user',text);});
       const s=await this.repo.read(); const revision=participant(s,id).revision;
-      const result=await this.agents.understand(this.ownContext(s,id));
-      const memoryUpdates=await this.repo.transact(d=>{
+      let memoryUpdates;
+      const commitUnderstanding=async result=>{
+      if(memoryUpdates)return memoryUpdates;
+      memoryUpdates=await this.repo.transact(d=>{
         const p=participant(d,id); requireValue(p.revision===revision,'Your understanding changed while Astrid was replying. Send another message to continue with the updated context.',409);
         const validEvidence=new Set(this.ownContext(d,id).messages.filter(m=>m.role==='user').map(m=>m.id));
         const updates=[...this.memoryStore.applyInTransaction(d,id,result.memories||[],validEvidence),...this.memoryStore.applyInTransaction(d,id,(result.stories||[]).filter(story=>story.evidenceIds?.includes(input.id)).map(story=>({...story,kind:'story',topic:'story',facet:null,strength:'unknown'})),validEvidence)];
@@ -110,12 +112,21 @@ export class AstridApp {
           for(const proposal of d.proposals)if(proposal.status==='pending'&&proposal.revisions[id]===priorRevision)proposal.revisions[id]=p.revision;
         }else if(updates.length||profileChanged||clarificationChanged) {invalidate(d,p,'conversation updated understanding');enqueue(d,id);}
         p.understandingPending=false;if(p.matchingDeferred){p.matchingDeferred=false;enqueue(d,id);}
-        return {updates,revision:p.revision};
-      });
+        return {updates,revision:p.revision,profile:clone(p)};
+      });return memoryUpdates;};
+      const result=await this.agents.understand({...this.ownContext(s,id),commitUnderstanding});
+      if(!memoryUpdates)await commitUnderstanding(result);
       const current=await this.repo.read(); const currentRevision=participant(current,id).revision;
       requireValue(currentRevision===memoryUpdates.revision,'Your understanding changed while Memy was recording it. Send another message to continue.',409);
       const understanding={gaps:(result.gaps||[]).filter(g=>topics.some(t=>t.id===g.topic)&&typeof g.reason==='string').slice(0,3)};
-      const response=await this.agents.converse({...this.ownContext(current,id),understanding});
+      const response=await this.agents.converse({...this.ownContext(current,id),understanding,actions:{
+        inspectMatches:async()=>{
+          const latest=await this.repo.read();requireValue(participant(latest,id).revision===currentRevision,'Understanding changed.',409);
+          return {profiles:(await this.discover(id)).profiles,clarifications:this.ownContext(latest,id).clarifications};
+        },
+        requestMatching:async()=>this.repo.transact(d=>{const p=participant(d,id);requireValue(p.revision===currentRevision&&p.matchingEnabled,'Matching unavailable.',409);const job=enqueue(d,id);this.kick();return {jobId:job.id,status:job.status};}),
+        requestPermission:async request=>this.repo.transact(d=>{requireValue(participant(d,id).revision===currentRevision,'Understanding changed.',409);const permission=this.addPermission(d,id,request);return {id:permission.id,status:permission.status,memoryId:permission.memoryId,recipientId:permission.recipientId};})
+      }});
       return await this.repo.transact(d=>{
         requireValue(participant(d,id).revision===currentRevision,'Your understanding changed while Astrid was replying. Send another message to continue with the updated context.',409);
         for(const request of response.permissions||[]) {
