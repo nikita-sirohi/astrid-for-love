@@ -138,6 +138,21 @@ export class AstridApp {
   }
   async listMemories(id) {await this.repo.read().then(s=>participant(s,id));return {memories:await this.memoryStore.list(id)};}
   async memoryHistory(id,memoryId) {const s=await this.repo.read();requireValue(s.memories.some(m=>m.id===memoryId&&m.participantId===id),'Memory not found.',404);return {revisions:await this.memoryStore.history(id,memoryId)};}
+  async summarizeLore(id) {
+    const snapshot=await this.repo.read();const owner=participant(snapshot,id);
+    requireValue(!owner.understandingPending,'Understanding is still updating.',409);
+    const memories=snapshot.memories.filter(m=>m.participantId===id&&!m.deleted);
+    const result=await this.agents.summarize({participant:owner,memories});
+    return this.repo.transact(state=>{
+      let updated=0;
+      for(const item of result.summaries){
+        const before=memories.find(m=>m.id===item.id);
+        const current=state.memories.find(m=>m.id===item.id&&m.participantId===id&&!m.deleted);
+        if(before&&current&&current.revision===before.revision&&current.text===before.text&&typeof item.summary==='string'&&item.summary.trim().length<=110){current.summary=item.summary.trim();updated++;}
+      }
+      return {updated};
+    });
+  }
   async editMemory(id,memoryId,patch,remove=false) {
     const result=await this.repo.transact(s=>{
       const p=participant(s,id);if(memoryId)ownMemory(s,memoryId,id);
@@ -175,17 +190,31 @@ export class AstridApp {
   sharedMemories(s,owner,recipient) {return s.memories.filter(m=>m.participantId===owner&&!m.deleted&&!s.permissions.some(p=>p.memoryId===m.id&&p.recipientId===recipient&&p.status==='denied'&&p.memoryRevision===m.revision)&&(m.sharing==='shareable'||s.permissions.some(p=>p.memoryId===m.id&&p.recipientId===recipient&&p.status==='granted'&&p.memoryRevision===m.revision)));}
   async evaluatePair(s,a,b) {
     const ids=[a.id,b.id];const constraint=eligibility(a,b);
-    const missing=ids.flatMap(id=>Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).map(([facet])=>({participantId:id,topic:facetFor(facet).topic,facet,evidenceIds:s.memories.filter(m=>m.participantId===id&&m.facet===facet&&!m.deleted).map(m=>m.id)})));
+    const known=ids.flatMap(id=>this.memoryStore.records(s,id)).filter(m=>m.kind!=='story');
+    const missing=ids.flatMap(id=>Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).map(([facet])=>({participantId:id,topic:facetFor(facet).topic,facet,evidenceIds:known.filter(m=>m.participantId===id&&m.facet===facet).map(m=>m.id)})));
+    const enoughMaterial=ids.every(id=>{
+      const confirmed=known.filter(m=>m.participantId===id&&m.status==='confirmed'&&facetFor(m.facet));
+      return confirmed.length>=3&&new Set(confirmed.map(m=>facetFor(m.facet).topic)).size>=2;
+    });
+    // Distance is unresolved readiness, not evidence that these people cannot fit.
+    // All other eligibility failures (including unknown adulthood/preferences) block review.
+    const hardGate=constraint&&constraint!=='Distance preferences have not been established.';
+    const phase=hardGate||((constraint||missing.length)&&!enoughMaterial)?'gated':constraint||missing.length?'preliminary':'full';
     let result;
-    if(constraint)result={decision:'withhold',exploration:'hold',reason:constraint,evidenceIds:[],clarifications:[]};
-    else if(missing.length)result={decision:'needs_clarification',exploration:'hold',reason:'Basic understanding needs clarification before an introduction.',evidenceIds:[],clarifications:missing.slice(0,2)};
-    else result=await this.agents.review({participants:[a,b],memories:ids.flatMap(id=>this.memoryStore.records(s,id)).filter(m=>m.kind!=='story'),previousReviews:s.reviews.filter(r=>ids.every(id=>r.participantIds.includes(id)&&r.revisions?.[id]===participant(s,id).revision)).slice(-4)});
+    if(hardGate)result={decision:'withhold',exploration:'hold',reason:constraint,evidenceIds:[],clarifications:[]};
+    else if(phase==='gated')result={decision:'needs_clarification',exploration:'hold',reason:'A little more understanding is needed before comparing this pair.',evidenceIds:[],clarifications:missing.slice(0,2)};
+    else result=await this.agents.review({participants:[a,b],memories:known,phase,missingFacets:missing,previousReviews:s.reviews.filter(r=>ids.every(id=>r.participantIds.includes(id)&&r.revisions?.[id]===participant(s,id).revision)).slice(-4)});
     requireValue(['propose','needs_clarification','withhold'].includes(result.decision),'Invalid matching result.',502);
-    const known=s.memories.filter(m=>ids.includes(m.participantId)&&!m.deleted&&m.kind!=='story');
     requireValue((result.evidenceIds||[]).every(id=>known.some(m=>m.id===id)),'Matching review cited unknown evidence.',502);
+    if(phase==='preliminary') {
+      // A useful early hypothesis never grants permission to introduce. Keep the
+      // model's consequential own-facet questions, with missing basics as fallback.
+      const clarifications=(result.clarifications||[]).filter(c=>ids.includes(c.participantId)&&facetFor(c.facet)?.topic===c.topic&&(c.evidenceIds||[]).every(e=>known.some(m=>m.id===e&&m.participantId===c.participantId&&m.facet===c.facet)));
+      result={...result,decision:result.decision==='withhold'?'withhold':'needs_clarification',exploration:'hold',clarifications:result.decision==='withhold'?[]:clarifications.length?clarifications:missing.slice(0,2)};
+    }
     if(result.decision==='propose')requireValue(ids.every(id=>known.some(m=>m.participantId===id&&result.evidenceIds?.includes(m.id))),'A proposal needs evidence from both people.',502);
     if(result.exploration==='allow')requireValue(!constraint&&!missing.length&&result.decision!=='withhold'&&ids.every(id=>known.some(m=>m.participantId===id&&result.evidenceIds?.includes(m.id))),'Exploration needs complete understanding and evidence from both people.',502);
-    return result;
+    return {...result,phase};
   }
   async discover(id) {
     const s=await this.repo.read(),a=participant(s,id);
@@ -284,7 +313,7 @@ export class AstridApp {
       }
       await this.repo.transact(d=>{
         if(ids.some(id=>participant(d,id).revision!==revisions[id]||participant(d,id).understandingPending)) {for(const id of ids)if(participant(d,id).understandingPending)participant(d,id).matchingDeferred=true;event(d,'stale_review','A review was discarded after an understanding changed.');return;}
-        const review={id:uid('review'),participantIds:ids,decision:result.decision,exploration:result.exploration||'hold',reason:textValue(result.reason,8000),evidenceIds:result.evidenceIds||[],clarifications:[],revisions,createdAt:now(),metadata:result.metadata};d.reviews.push(review);d.jobs.find(j=>j.id===job.id)?.reviewIds.push(review.id);
+        const review={id:uid('review'),participantIds:ids,decision:result.decision,phase:result.phase,exploration:result.exploration||'hold',reason:textValue(result.reason,8000),evidenceIds:result.evidenceIds||[],clarifications:[],revisions,createdAt:now(),metadata:result.metadata};d.reviews.push(review);d.jobs.find(j=>j.id===job.id)?.reviewIds.push(review.id);
         for(const c of result.clarifications||[]) {
           const f=facetFor(c.facet);if(!ids.includes(c.participantId)||!f||f.topic!==c.topic)continue;
           const evidenceIds=c.evidenceIds||[];

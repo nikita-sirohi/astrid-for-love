@@ -99,3 +99,10 @@ The current app adds Memy v0.2.0 before Astrid v0.8.0. `understand(ownContext)` 
 ## Personality handoff
 
 Memy v0.3.0 adds separate story suggestions, each supported by fresh own user evidence. The application stores them before Astrid replies as private `kind: story` memories with no compatibility facet. Astrid can request a versioned exact-recipient grant for a story ID using the existing permission handoff. Only authorized story content enters an introduction; a promising private matching rationale does not authorize disclosure. Stories are excluded from readiness, matching evidence, and clarification completion.
+
+
+### Preliminary comparisons and lore summaries
+
+Review input includes phase (preliminary/full) and missingFacets. A preliminary review tests promising compatibility hypotheses and returns consequential own-facet clarifications; the application forces exploration=hold and disallows proposals until full readiness. Astrid gives relevant queued clarification priority once the current expectation and its meaningful limits are understood. Clarification wording remains derived from semantic facets; private pair reasoning is never forwarded.
+
+Memy understanding records include nullable summary, a display phrase of at most 110 characters. Its separate summarize task receives only the owner's current records and returns one {id,summary} per record. Source text, strength, evidence, uncertainty and consent are not rewritten by this task.

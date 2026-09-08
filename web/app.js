@@ -5,6 +5,7 @@ const button = (label, className, action) => { const node = el('button', classNa
 let bootstrap, activeId, data, view = 'people', conversation = 'astrid', sending = false, refreshing = false;
 let chatSignature = '', knowledgeSignature = '', presenterSignature = '', toastTimer;
 const drafts = new Map();
+let pendingSend = null;
 let discoverProfiles=[],discoverSignature='',selectedPerson=null;
 const assessments=new Map(),adviceBusy=new Set();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
@@ -34,6 +35,13 @@ async function mutate(path, method, body, success) {
 }
 function draftKey() { return `${activeId}/${conversation}`; }
 function saveDraft() { if(activeId) drafts.set(draftKey(), $('#message-input').value); }
+function sentMessage(messages, submission) {
+  return messages.some(message => !submission.knownIds.has(message.id) && message.authorId === submission.actor && message.text === submission.text);
+}
+function composerMessages(messages) {
+  if(!pendingSend || pendingSend.actor !== activeId || pendingSend.chat !== conversation || sentMessage(messages,pendingSend)) return messages;
+  return [...messages,{id:'sending',authorId:pendingSend.actor,text:pendingSend.text,role:'user'}];
+}
 function resetSignatures() { chatSignature = ''; knowledgeSignature = ''; }
 function selectConversation(id) { $('#person-dialog').hidden=true; saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); if(id==='discover')refresh(true); }
 function renderNav() {
@@ -132,7 +140,7 @@ function permissionNode(permission) {
 function renderChat() {
   const chat = data.chats.find(c => c.id === conversation);
   if(conversation !== 'astrid' && conversation !== 'proposals' && !chat) conversation = 'astrid';
-  const messages = chat?.messages || data.messages;
+  const messages = composerMessages(chat?.messages || data.messages);
   const signature = JSON.stringify([activeId,conversation,messages, data.proposals, data.permissions]);
   if(signature === chatSignature) return; chatSignature = signature;
   const content = $('#chat-content'); const nearBottom = content.scrollHeight-content.scrollTop-content.clientHeight < 100; const oldScroll = content.scrollTop;
@@ -155,10 +163,10 @@ function renderChat() {
 function renderKnowledge() {
   const signature=JSON.stringify([data.memories,data.participant]);if(signature===knowledgeSignature)return;knowledgeSignature=signature;
   const target=$('#knowledge');target.replaceChildren(avatar(data.participant,'notebook-photo'),el('h3','notebook-name',data.participant.name));
-  const memories=data.memories.filter(m=>!m.deleted).sort((a,b)=>(b.strength==='requires')-(a.strength==='requires'));
+  const memories=data.memories.filter(m=>!m.deleted).sort((a,b)=>(a.kind==='story')-(b.kind==='story')||(b.strength==='requires')-(a.strength==='requires'));
   const list=el('ul','lore-list');
   const add=(memory,parent)=>{
-    const row=el('li','lore-note');const words=memory.text.split(/\s+/);const brief=words.length>23?words.slice(0,23).join(' ')+'…':memory.text;const text=button(brief,'lore-text',()=>memoryDialog(memory));text.title='Edit this note';
+    const row=el('li','lore-note');const words=memory.text.split(/\s+/);const brief=memory.summary||(words.length>12?words.slice(0,12).join(' ')+'…':memory.text);const text=button(brief,'lore-text',()=>memoryDialog(memory));text.title='Edit this note';
     if(memory.status!=='confirmed')row.append(el('span','lore-uncertain','Still getting this right · '));
     row.append(text,button('×','remove-note',()=>removeMemory(memory)));parent.append(row);
   };
@@ -251,17 +259,33 @@ function renderPresenter(result) {
   grid.append(reviews,jobs); root.append(grid);
 }
 $('#composer').addEventListener('submit',async event=>{
-  event.preventDefault(); if(sending || (conversation==='astrid'&&data?.busy)) return; const text=$('#message-input').value.trim(); if(!text) return;
-  const actor=activeId, chat=conversation, key=draftKey(); sending=true; renderHeading();
+  event.preventDefault(); if(sending || (conversation==='astrid'&&data?.busy)) return; const input=$('#message-input'), original=input.value, text=original.trim(); if(!text) return;
+  const actor=activeId, chat=conversation, key=draftKey();
+  const messages=chat==='astrid'?data.messages:data.chats.find(c=>c.id===chat)?.messages || [];
+  const submission={actor,chat,text,knownIds:new Set(messages.map(message=>message.id))};
+  pendingSend=submission; sending=true; drafts.delete(key); input.value=''; renderHeading(); renderChat();
+  $('#chat-content').scrollTop=$('#chat-content').scrollHeight;
   try {
     const result=await api(chat==='astrid' ? `/api/participants/${actor}/messages` : `/api/chats/${chat}/messages`,{method:'POST',body:{text}},actor);
-    // Keep anything the person began writing while this request was in flight.
-    if((drafts.get(key) || '').trim() === text) drafts.delete(key);
-    if(actor===activeId&&chat===conversation && $('#message-input').value.trim() === text) $('#message-input').value='';
     if(result.error) showError(`${result.error} Your message was saved. Send a follow-up when you’re ready to try again.`);
     await refresh(true);
-  } catch(error) { showError(`${error.message} Your draft is kept below. Check the conversation before retrying.`,()=>refresh(true)); }
-  finally { sending=false; if(data) renderHeading(); }
+  } catch(error) {
+    // A failed response can still follow a committed user message. Check before restoring it.
+    let saved=false, verified=false;
+    try {
+      const snapshot=await api(`/api/participants/${actor}`,{},actor);
+      saved=sentMessage(chat==='astrid'?snapshot.messages:snapshot.chats.find(c=>c.id===chat)?.messages || [],submission); verified=true;
+      if(actor===activeId) data=snapshot;
+    } catch {}
+    if(saved) showError(`${error.message} Your message was saved. Check the conversation before sending a follow-up.`,()=>refresh(true));
+    else {
+      const here=actor===activeId&&chat===conversation;
+      const nextDraft=here?input.value:drafts.get(key) || '';
+      if(!nextDraft) {drafts.set(key,original);if(here)input.value=original;}
+      const recovery=nextDraft?`Your newer draft is kept. Unsent message: “${original}”`:'Your draft has been restored.';
+      showError(`${error.message} ${recovery}${verified?'':' Delivery could not be confirmed; check the conversation before retrying.'}`,()=>refresh(true));
+    }
+  } finally { pendingSend=null; sending=false; if(data) {renderHeading();renderChat();} }
 });
 $('#message-input').addEventListener('input',saveDraft);
 $('#message-input').addEventListener('keydown',event=>{ if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing) { event.preventDefault(); $('#composer').requestSubmit(); } });

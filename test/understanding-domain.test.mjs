@@ -91,3 +91,16 @@ test('a protected profile conflict blocks eligibility until a deliberate UI edit
   state = await repository.read(); maya = state.participants.find(person => person.id === 'maya');
   assert.equal(maya.age, 26); assert.deepEqual(maya.profileConflicts, []); assert.equal(eligibility(maya, eli), null);
 });
+
+test('lore compression changes only display summaries and skips concurrent edits', async t => {
+  const { app, repository } = await setup(t);
+  const note=await app.editMemory('maya',null,{topic:'family',facet:'family.household',text:'A relative can live with us for two weeks, but not permanently.',status:'confirmed',strength:'accepts',sharing:'private'});
+  const before=await repository.read();const record=before.memories.find(m=>m.participantId==='maya');
+  app.agents.summarize=async ctx=>{assert.equal(ctx.memories.length,1);return {summaries:[{id:record.id,summary:'Accepts relatives staying briefly, not moving in permanently.'}]};};
+  assert.equal((await app.summarizeLore('maya')).updated,1);
+  const after=await repository.read();const compact=after.memories.find(m=>m.id===record.id);
+  const {summary,...unchanged}=compact;const {summary:oldSummary,...original}=record;assert.deepEqual(unchanged,original);assert.deepEqual(after.participants,before.participants);assert.deepEqual(after.jobs,before.jobs);
+  app.agents.summarize=async()=>{await app.editMemory('maya',record.id,{text:'A relative can stay for one week.'});return {summaries:[{id:record.id,summary:'Old stale summary'}]};};
+  assert.equal((await app.summarizeLore('maya')).updated,0);
+  assert.equal((await app.listMemories('maya')).memories[0].summary,null);
+});

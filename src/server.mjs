@@ -39,6 +39,7 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
           else if(method==='POST'&&/^discover\/[^/]+\/(advice|interest|discuss)$/.test(rest||'')){const [,other,action]=rest.split('/');const input=await body(req);result=action==='advice'?await app.browseAdvice(id,other):action==='discuss'?await app.discussAdvice(id,other,input.reviewId):await app.browseInterest(id,other,input.reviewId);}
           else if(method==='POST'&&rest==='messages')result=await app.converse(id,(await body(req)).text);
           else if(method==='PATCH'&&rest==='profile')result=await app.profile(id,await body(req));
+          else if(method==='POST'&&rest==='lore/refresh')result=await app.summarizeLore(id);
           else if(method==='GET'&&rest==='memories')result=await app.listMemories(id);
           else if(method==='GET'&&/^memories\/[^/]+\/history$/.test(rest||''))result=await app.memoryHistory(id,rest.split('/')[1]);
           else if(method==='POST'&&rest==='memories')result=await app.editMemory(id,null,await body(req));

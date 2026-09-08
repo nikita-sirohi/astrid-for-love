@@ -24,8 +24,8 @@ export class FileMemoryStore {
   if(candidate.id&&(!existing||existing.deleted||existing.userLocked||existing.facet!==candidate.facet||(existing.kind==='story')!==story))continue;
   // No topic-based upsert: each new statement gets an independent identity.
   if(!existing&&state.memories.some(m=>m.participantId===owner&&!m.deleted&&m.facet===candidate.facet&&m.text.trim()===candidate.text.trim()))continue;
-  const patch={...(story?{kind:'story',storyType:candidate.storyType,topic:'story',facet:null}:{topic:facet.topic,facet:facet.id}),text:candidate.text.trim(),status:candidate.status,strength:story?'unknown':candidate.strength,evidenceIds:[...new Set(candidate.evidenceIds)]};
-  if(existing&&existing.text===patch.text&&existing.status===patch.status&&existing.strength===patch.strength&&existing.storyType===patch.storyType&&JSON.stringify(existing.evidenceIds)===JSON.stringify(patch.evidenceIds))continue;
+  const patch={...(story?{kind:'story',storyType:candidate.storyType,topic:'story',facet:null}:{topic:facet.topic,facet:facet.id}),text:candidate.text.trim(),summary:typeof candidate.summary==='string'&&candidate.summary.trim().length<=110?candidate.summary.trim():null,status:candidate.status,strength:story?'unknown':candidate.strength,evidenceIds:[...new Set(candidate.evidenceIds)]};
+  if(existing&&existing.text===patch.text&&existing.summary===patch.summary&&existing.status===patch.status&&existing.strength===patch.strength&&existing.storyType===patch.storyType&&JSON.stringify(existing.evidenceIds)===JSON.stringify(patch.evidenceIds))continue;
   let memory=existing;
   if(memory){archive(memory);Object.assign(memory,patch,{revision:memory.revision+1,sharing:'private'});}
   else {memory={id:`memory-${randomUUID()}`,participantId:owner,...patch,sharing:'private',revision:1,deleted:false,history:[]};state.memories.push(memory);}
@@ -45,6 +45,7 @@ export class FileMemoryStore {
  if(id)archive(m);
  if(remove)m.deleted=true;
  else for(const key of ['kind','storyType','text','topic','facet','status','strength','sharing'])if(patch[key]!==undefined)m[key]=key==='text'?patch[key].trim():patch[key];
+ if(['text','status','strength'].some(key=>patch[key]!==undefined))m.summary=null;
  if(m.kind==='story')m.strength='unknown';
  m.revision++;m.userLocked=true;if(!id)state.memories.push(m);return snapshot(m);
  }

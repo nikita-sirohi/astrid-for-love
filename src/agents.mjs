@@ -14,11 +14,13 @@ const object = properties => ({ type: 'object', properties, required: Object.key
 const topic = enumeration(topics);
 const facet = enumeration(facets.map(item => item.id));
 const profileFields = ['age', 'gender', 'pronouns', 'interestedIn', 'ageRange', 'location'];
+const summary={type:['string','null'],minLength:1,maxLength:110};
 const schemas = {
+  summarize: object({summaries:array(object({id:string,summary:{type:'string',minLength:1,maxLength:110}}),80)}),
   converse: object({ reply: string, permissions: array(object({ memoryId: string, recipientId: string })) }),
-  understand: object({ memories: array(object({ id: { type: ['string', 'null'] }, topic, facet, text: string,
+  understand: object({ memories: array(object({ id: { type: ['string', 'null'] }, topic, facet, text: string, summary,
       status: enumeration(['confirmed', 'tentative']), strength: enumeration(['requires', 'prefers', 'accepts', 'unknown']), evidenceIds: array(string) })),
-    stories: array(object({ id: { type: ['string','null'] }, storyType: enumeration(storyTypes), text: string, status: enumeration(['confirmed','tentative']), evidenceIds: array(string) }), 6),
+    stories: array(object({ id: { type: ['string','null'] }, storyType: enumeration(storyTypes), text: string, summary, status: enumeration(['confirmed','tentative']), evidenceIds: array(string) }), 6),
     profileUpdates: array(object({ field: enumeration(profileFields), value: string, correction: { type: 'boolean' }, evidenceIds: array(string) }), 6),
     clarificationUpdates: array(object({ id: string, status: enumeration(['answered', 'deferred', 'declined', 'obsolete']), evidenceIds: array(string) })),
     gaps: array(object({ topic, reason: { type: 'string', minLength: 1, maxLength: 600 } }), 2) }),
@@ -31,7 +33,7 @@ const schemas = {
 
 // Validate locally too: refusals, malformed adapters and invalid IDs never become mutations.
 function validate(value, schema) {
-  if (Array.isArray(schema.type)) return schema.type.includes(value === null ? 'null' : typeof value);
+  if (Array.isArray(schema.type)) return schema.type.some(type=>type==='null'?value===null:validate(value,{...schema,type}));
   if (schema.type === 'object') return value && typeof value === 'object' && !Array.isArray(value)
     && Object.keys(value).every(key => Object.hasOwn(schema.properties, key))
     && schema.required.every(key => Object.hasOwn(value, key) && validate(value[key], schema.properties[key]));
@@ -41,7 +43,7 @@ function validate(value, schema) {
     && (!schema.minLength || value.trim().length >= schema.minLength) && (!schema.maxLength || value.length <= schema.maxLength);
 }
 
-export async function applicationPrompt(role, version = role === 'memy' ? '0.3.0' : selectedVersions[role]) {
+export async function applicationPrompt(role, version = role === 'memy' ? '0.4.0' : selectedVersions[role]) {
   if (role === 'memy') {
     if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid Memy prompt version.');
     const file = `memy/v${version}.md`;
@@ -54,9 +56,9 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.3.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.6.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.7.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.6.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.7.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -92,10 +94,11 @@ const ownMessages = (messages, id) => messages.filter(message => message.chatId 
   .map(message => pick(message, ['id', 'role', 'authorId', 'text']));
 
 function contextFor(task, args) {
+  if(task==='summarize')return {memories:ownMemories(args.memories||[],args.participant.id)};
   if (task === 'review') {
     if (args.participants.length !== 2) throw new Error('Matching requires exactly two participants.');
     const ids = args.participants.map(person => person.id);
-    return { facets, participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted && memory.kind !== 'story').map(cleanMemory),
+    return { facets, phase:args.phase||'full', missingFacets:args.missingFacets||[], participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted && memory.kind !== 'story').map(cleanMemory),
       previousReviews: (args.previousReviews || []).map(review => pick(review, ['decision', 'reason', 'evidenceIds', 'clarifications', 'revisions'])) };
   }
   if (task === 'advise') {
@@ -132,6 +135,7 @@ function contextFor(task, args) {
 
 function validateReferences(task, data, context) {
   const fail = () => { throw new Error('Invalid agent evidence or authority.'); };
+  if(task==='summarize'){if(data.summaries.length!==context.memories.length||new Set(data.summaries.map(x=>x.id)).size!==data.summaries.length||data.summaries.some(x=>!context.memories.some(m=>m.id===x.id)))fail();return;}
   if (task === 'review') {
     if (data.decision === 'withhold' && data.exploration !== 'hold') fail();
     if (data.exploration === 'allow' && context.participants.some(person => facets.some(facet => !context.memories.some(memory => memory.participantId === person.id && memory.facet === facet.id && memory.status === 'confirmed') || context.memories.some(memory => memory.participantId === person.id && memory.facet === facet.id && memory.status === 'tentative')))) fail();
@@ -195,6 +199,7 @@ const questions = {
 };
 
 function scripted(task, context) {
+  if(task==='summarize')return {summaries:context.memories.map(m=>({id:m.id,summary:m.text.length>107?m.text.slice(0,107)+'…':m.text}))};
   if (task === 'advise') {
     const name = context.other.name;
     if (context.assessment.status === 'hold') return { text: `I would hold off on requesting an introduction to ${name} for now. ${context.assessment.topics.length ? `We need to explore ${context.assessment.topics.map(t=>t.label.toLowerCase()).join(" and ")} if you want to connect.` : "I cannot recommend an introduction on what is established yet; I will not invent a reason or ask you to negotiate someone’s boundary."}` };
@@ -243,10 +248,10 @@ function scripted(task, context) {
 
 export function createAgents({ mode = 'live', client = structuredResponse, config, versions = selectedVersions, timeoutMs = 120000 } = {}) {
   if (!['live', 'offline'].includes(mode)) throw new Error('Unknown agent mode.');
-  const promptVersions = { ...selectedVersions, memy: '0.3.0', ...versions };
+  const promptVersions = { ...selectedVersions, memy: '0.4.0', ...versions };
   async function run(task, args) {
     const context = contextFor(task, args);
-    const role = task === 'review' ? 'matchy' : task === 'understand' ? 'memy' : 'astrid';
+    const role = task === 'review' ? 'matchy' : ['understand','summarize'].includes(task) ? 'memy' : 'astrid';
     const prompt = await applicationPrompt(role, promptVersions[role]);
     const started = Date.now();
     let result;
@@ -261,7 +266,7 @@ export function createAgents({ mode = 'live', client = structuredResponse, confi
       }
     }
     // Offline suggestions omit optional IDs; the wire format uses nullable required IDs.
-    if (task === 'understand') for (const memory of [...(result.data?.memories || []), ...(result.data?.stories || [])]) memory.id ??= null;
+    if (task === 'understand') for (const memory of [...(result.data?.memories || []), ...(result.data?.stories || [])]) {memory.id ??= null;memory.summary??=null;}
     if (!validate(result.data, schemas[task])) throw new Error('Invalid agent response.');
     validateReferences(task, result.data, context);
     return { ...result.data, metadata: { mode, model: result.model || config?.model || 'gpt-6-astra',

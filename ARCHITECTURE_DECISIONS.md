@@ -157,3 +157,12 @@ Maintain current pending proposal acceptances when a turn only adds new private 
 A current-version recipient-specific denial overrides broad shareable status. Model revisions reset general sharing to private; exact-recipient grants remain tied to the prior record revision. Background introductions retain the uncertainty of all authorized memory material. Story edits preserve tentative status unless the owner explicitly confirms it.
 
 Remaining intentional demo limits: readiness is a structural gate over 16 facets rather than a semantic proof; matching order uses disposition buckets, not relative likelihood; clarification questions use fixed recipient-safe facet definitions; the shared-chat opening remains templated; check-ins and retries are manual; full-state local transactions and recent-message windows are not a scalable retrieval system. These do not prevent conversation and personality iteration, but should not be presented as completed production capabilities.
+
+
+## AD-018: Earlier private reviews and compact lore
+
+Matchy can compare incomplete profiles after both people have explicit adult/mutual eligibility and at least three confirmed relationship beliefs across two topics each. Missing or different location permits a preliminary comparison but still blocks introductions. Stories and tentative beliefs do not count toward this threshold. Preliminary reviews select consequential recipient-owned facets for Astrid to explore; they cannot publish a proposal or allow an introduction. The existing baseline and consent checks apply to full reviews. The three-belief threshold is a demo heuristic, not a compatibility score.
+
+Memy stores concise key learnings with a separate short summary (maximum 110 characters) for the lore UI. Clarifications of the same expectation should revise its unlocked record instead of accumulating recaps. Full text, evidence, uncertainty and independent boundaries remain available for correction and matching. Existing records can receive display-only compression through POST /api/participants/:id/lore/refresh; results are scoped to the owner and skipped if source records changed during generation. This does not alter belief revisions, sharing permissions or readiness. User text edits clear stale summaries. Stories sort after preferences in the compact panel.
+
+The composer clears immediately and renders the pending message. Failed requests check whether the server already saved the message before restoring a draft, preserving newer text and drafts in other conversations.

@@ -18,7 +18,7 @@ test('application prompt keeps role examples, replaces laboratory limitations, a
   assert.doesNotMatch(prompt.instructions, /local prompt laboratory|No application tools are available/);
   assert.match(prompt.instructions, /one bounded application task/);
   assert.equal(prompt.hash.length, 64);
-  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.6.0.md');
+  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.7.0.md');
 });
 
 test('converse whitelists own context and strips private matching rationale from clarifications', async () => {
@@ -115,7 +115,7 @@ test('offline family conversation records evidence and answers own queued work o
 
 test('Memy has a standalone versioned prompt and only receives own authorized understanding', async () => {
   const prompt = await applicationPrompt('memy');
-  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.3.0.md']);
+  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.4.0.md']);
   assert.match(prompt.instructions, /before Astrid's reply/);
   const result = await adapter(understanding(), request => {
     const { context } = JSON.parse(request.input[0].content);
@@ -131,7 +131,7 @@ test('Memy has a standalone versioned prompt and only receives own authorized un
     messages: [...input.messages, { ...message, chatId: 'astrid-b', authorId: 'b', text: 'OTHER SECRET' }],
     clarifications: [{ id: 'q', participantId: 'b', topic: 'family', facet: 'family.household', status: 'queued', reason: 'OTHER SECRET' }] });
   assert.equal(result.metadata.prompt.role, 'memy');
-  assert.equal(result.metadata.prompt.version, '0.3.0');
+  assert.equal(result.metadata.prompt.version, '0.4.0');
 });
 
 test('Astrid receives compact gap briefing but cannot produce understanding mutations', async () => {
@@ -226,4 +226,13 @@ test('offline review permits exploring ordinary planning preferences after compl
     const advice = await agents.advise({ participant: person, memories: records, other, assessment: { status, topics: [], canRequest: status !== 'hold' } });
     assert.ok(advice.text.length > 0); assert.doesNotMatch(advice.text, /Matchy/);
   }
+});
+
+test('lore summaries use only own records and reject missing, foreign or oversized outputs', async () => {
+  const args={...input,memories:[memory,{...memory,id:'foreign',participantId:'b',text:'OTHER SECRET'}]};
+  await adapter({summaries:[{id:memory.id,summary:'Prefers a long-term relationship'}]},request=>{
+    const {context}=JSON.parse(request.input[0].content);
+    assert.deepEqual(Object.keys(context),['memories']);assert.equal(context.memories.length,1);assert.ok(!JSON.stringify(context).includes('OTHER SECRET'));
+  }).summarize(args);
+  for(const summaries of [[],[{id:'foreign',summary:'Bad'}],[{id:memory.id,summary:'x'.repeat(111)}]])await assert.rejects(adapter({summaries}).summarize(args),/Invalid agent/);
 });
