@@ -95,3 +95,38 @@ test('a declined introduction cannot be resurrected through browsing', async t =
   await assert.rejects(app.browseInterest('eli', 'elena', advice.assessment.reviewId), conflict);
   assert.equal((await app.presenter()).counts.chats, 0);
 });
+
+test('current verdicts order discovery without fabricated scores; discussion persists safe advice once', async t => {
+ const {app,repository}=await setup(t);
+ const unknown=await app.discover('eli');assert.ok(unknown.profiles.every(p=>p.matchStatus==='unknown'));
+ const elena=await app.browseAdvice('eli','elena');
+ const maya=await app.browseAdvice('eli','maya');
+ const ranked=await app.discover('eli');assert.equal(ranked.profiles[0].id,'elena');
+ assert.ok(ranked.profiles.every(p=>p.score===undefined));
+ const first=await app.discussAdvice('eli','maya',maya.assessment.reviewId);
+ const again=await app.discussAdvice('eli','maya',maya.assessment.reviewId);
+ assert.equal(first.message.id,again.message.id);assert.match(first.message.text,/About Maya/);
+ assert.equal(first.message.authorId,'astrid');
+ await app.profile('eli',{bio:'Updated'});
+ await assert.rejects(app.discussAdvice('eli','elena',elena.assessment.reviewId),conflict);
+});
+
+test('missing own evidence still produces a concrete private discussion question', async t=>{
+ const {app,repository}=await setup(t);
+ await repository.transact(s=>{s.memories=s.memories.filter(m=>m.participantId!=='eli');});
+ const advice=await app.browseAdvice('eli','elena');
+ assert.match(advice.assessment.text,/explore/i);
+ const result=await app.discussAdvice('eli','elena',advice.assessment.reviewId);
+ assert.match(result.message.text,/What kind of relationship do you want/);
+ assert.equal((await repository.read()).memories.filter(m=>m.participantId==='eli').length,0);
+});
+
+test('blank fictional shells are previewable but cannot bypass adult eligibility or readiness',async t=>{
+ const {app,repository}=await setup(t);
+ await repository.transact(s=>{for(const p of s.participants){p.demoShell=true;p.age=null;p.gender='';p.interestedIn=[];p.bio='';p.interests=[];}s.memories=[];});
+ assert.equal((await app.discover('eli')).profiles.length,3);
+ const advice=await app.browseAdvice('eli','elena');assert.equal(advice.assessment.canRequest,false);
+ await assert.rejects(app.browseInterest('eli','elena',advice.assessment.reviewId),conflict);
+ await repository.transact(s=>{s.participants.find(p=>p.id==='elena').age=17;});
+ assert.ok(!(await app.discover('eli')).profiles.some(p=>p.id==='elena'));
+});

@@ -52,9 +52,9 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.2.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.4.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.5.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.4.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.5.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -103,7 +103,7 @@ function contextFor(task, args) {
       const def = facets.find(facet => facet.id === item.facet);
       if (!def) return [];
       const evidenceIds = (item.evidenceIds || []).filter(id => memories.some(memory => memory.id === id && memory.facet === def.id));
-      return evidenceIds.length ? [{ ...def, evidenceIds }] : [];
+      return !item.evidenceIds?.length || evidenceIds.length ? [{ ...def, evidenceIds }] : [];
     });
     return { participant: ownProfile(args.participant), memories, other: publicProfile(args.other),
       shareableMemories: (args.shareableMemories || []).filter(memory => !memory.deleted && memory.participantId === args.other.id).map(cleanMemory),
@@ -189,7 +189,7 @@ const questions = {
 function scripted(task, context) {
   if (task === 'advise') {
     const name = context.other.name;
-    if (context.assessment.status === 'hold') return { text: `I would hold off on requesting an introduction to ${name} for now. There is more to understand before I would encourage this connection.` };
+    if (context.assessment.status === 'hold') return { text: `I would hold off on requesting an introduction to ${name} for now. ${context.assessment.topics.length ? `We need to explore ${context.assessment.topics.map(t=>t.label.toLowerCase()).join(" and ")} if you want to connect.` : "I cannot recommend an introduction on what is established yet; I will not invent a reason or ask you to negotiate someone’s boundary."}` };
     if (context.assessment.status === 'explore') return { text: `${name} looks worth getting curious about. I would use an early conversation to compare what a good week together looks like—there is room to discover whether your rhythms fit.` };
     return { text: `I think ${name} looks promising for you. ${context.other.interests?.[0] ? `Ask about ${context.other.interests[0]}; that is a better opening than trying to deliver the perfect line.` : 'Start with a story and see whether the conversation has a little pull.'}` };
   }

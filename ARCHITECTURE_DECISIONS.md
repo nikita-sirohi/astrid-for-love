@@ -63,7 +63,7 @@ Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Se
 - [Astrid v0.8.0](prompts/astrid/v0.8.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
 - [Matchy v0.6.0](prompts/matchy/v0.6.0.md)
 
-See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.4.0](prompts/runtime/v0.4.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.5.0](prompts/runtime/v0.5.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 
@@ -137,6 +137,6 @@ The participant experience has no identity switcher, model/storage badges, demo 
 
 ## Profile browsing and advisory exploration
 
-The active conversation is the landing view; muted potential connections appear beneath the composer. Only opted-in, discoverable, mutually eligible profiles enter the browse pool. Matchy reviews current understanding on demand, returning a decision plus explicit exploration allow/hold. Complete baseline understanding remains mandatory; a firm conflict or prior decline cannot be overridden by interest. Astrid receives a separate participant-safe advice context: own understanding, public counterpart profile, specifically permitted counterpart stories, and own discussion facets. Private pair rationale never enters this context.
+The active conversation is the landing view; muted potential connections appear under the active conversations in the sidebar. Only opted-in, discoverable, mutually eligible profiles enter the browse pool. Matchy reviews current understanding on demand, returning a decision plus explicit exploration allow/hold. Complete baseline understanding remains mandatory; a firm conflict or prior decline cannot be overridden by interest. Astrid receives a separate participant-safe advice context: own understanding, public counterpart profile, specifically permitted counterpart stories, and own discussion facets. Private pair rationale never enters this context.
 
 Advice and interest bind to reviewed participant revisions. Interest records one acceptance; the existing proposal lifecycle requires the other acceptance before creating a chat. File-store transactions persist advice, reviews, clarifications, and consent. The interface uses an absurd illustrated clubhouse and keeps internal agent names and operator status out of participant copy.

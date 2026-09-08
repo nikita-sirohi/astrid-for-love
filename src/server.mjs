@@ -36,7 +36,7 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
           const [,id,rest]=match;scoped(id);
           if(method==='GET'&&!rest)result=await app.view(id);
           else if(method==='GET'&&rest==='discover')result=await app.discover(id);
-          else if(method==='POST'&&/^discover\/[^/]+\/(advice|interest)$/.test(rest||'')){const [,other,action]=rest.split('/');const input=await body(req);result=action==='advice'?await app.browseAdvice(id,other):await app.browseInterest(id,other,input.reviewId);}
+          else if(method==='POST'&&/^discover\/[^/]+\/(advice|interest|discuss)$/.test(rest||'')){const [,other,action]=rest.split('/');const input=await body(req);result=action==='advice'?await app.browseAdvice(id,other):action==='discuss'?await app.discussAdvice(id,other,input.reviewId):await app.browseInterest(id,other,input.reviewId);}
           else if(method==='POST'&&rest==='messages')result=await app.converse(id,(await body(req)).text);
           else if(method==='PATCH'&&rest==='profile')result=await app.profile(id,await body(req));
           else if(method==='GET'&&rest==='memories')result=await app.listMemories(id);
@@ -75,7 +75,7 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
 
 export async function start({port=Number(process.env.PORT||4310),mode=process.env.ASTRID_MODE||'live',file}={}) {
   if(!['live','offline'].includes(mode))throw new Error('ASTRID_MODE must be live or offline.');
-  const repository=new JsonFileRepository(file);const app=new AstridApp({repository,agents:createAgents({mode}),mode});
+  const repository=new JsonFileRepository(file,resolve(root,mode==='live'?'fixtures/people.json':'fixtures/demo.json'));const app=new AstridApp({repository,agents:createAgents({mode}),mode});
   // One writer process per app store. Stale locks require deliberate operator recovery.
   await mkdir(dirname(repository.file),{recursive:true,mode:0o700});const lockPath=repository.file+'.server.lock';let lock;
   try {lock=await open(lockPath,'wx',0o600);}catch {throw new Error('App store is already locked. Stop the other server, or remove its stale .server.lock after confirming that process exited.');}

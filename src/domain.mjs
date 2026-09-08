@@ -184,7 +184,13 @@ export class AstridApp {
   }
   async discover(id) {
     const s=await this.repo.read(),a=participant(s,id);
-    return {profiles:s.participants.filter(b=>b.id!==id&&b.discoverable===true&&!eligibility(a,b)).map(publicProfile)};
+    const rank={promising:0,explore:1,unknown:2,hold:3};
+    const profiles=s.participants.filter(b=>b.id!==id&&b.discoverable===true&&(!eligibility(a,b)||(a.demoShell&&b.demoShell&&a.matchingEnabled&&b.matchingEnabled&&![a,b].some(p=>Number.isInteger(p.age)&&p.age<18)&&['Only adults can participate.','Dating preferences need clarification.','Distance preferences have not been established.'].includes(eligibility(a,b))))).map(b=>{
+      const review=[...s.reviews].reverse().find(r=>[id,b.id].every(x=>r.participantIds.includes(x)&&r.revisions?.[x]===participant(s,x).revision));
+      const matchStatus=this.declinedPair(s,[id,b.id])?'hold':review?this.assessmentStatus(review):'unknown';
+      return {...publicProfile(b),matchStatus};
+    }).sort((a,b)=>rank[a.matchStatus]-rank[b.matchStatus]||a.name.localeCompare(b.name));
+    return {profiles};
   }
   assessmentStatus(review) {return review.decision==='propose'?'promising':review.decision==='needs_clarification'&&review.exploration==='allow'?'explore':'hold';}
   declinedPair(s,ids) {return s.proposals.some(p=>ids.every(id=>p.participantIds.includes(id))&&['declined','withdrawn'].includes(p.status));}
@@ -211,11 +217,25 @@ export class AstridApp {
       const canRequest=status!=='hold'&&a.discoverable===true&&!existing;
       // Only the actor's own uncertainty goes to Astrid. Other-person concerns and
       // all pair rationale remain private even when they explain the match judgment.
-      const topics=(review.clarifications||[]).filter(c=>c.participantId===id).map(c=>({facet:c.facet,evidenceIds:(c.evidenceIds||[]).filter(e=>s.memories.some(m=>m.id===e&&m.participantId===id&&!m.deleted))}));
+      let topics=(review.clarifications||[]).filter(c=>c.participantId===id).map(c=>({facet:c.facet,evidenceIds:(c.evidenceIds||[]).filter(e=>s.memories.some(m=>m.id===e&&m.participantId===id&&!m.deleted))}));
+      if(!topics.length&&status==='hold'&&!this.declinedPair(s,ids))topics=Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).slice(0,2).map(([facet])=>({facet,evidenceIds:[]}));
       const advice=await this.agents.advise({participant:a,memories:this.memoryStore.records(s,id),other:publicProfile(b),shareableMemories:this.sharedMemories(s,otherId,id),assessment:{status,canRequest,topics}});
-      await this.repo.transact(d=>{requireValue(ids.every(id=>participant(d,id).revision===revisions[id]),'This understanding changed. Ask Astrid again.',409);d.browseAdvice??=[];d.browseAdvice.push({id:uid('advice'),participantId:id,otherId,reviewId:review.id,revisions,status,text:textValue(advice.text,2400),metadata:advice.metadata,createdAt:now()});});
+      await this.repo.transact(d=>{requireValue(ids.every(id=>participant(d,id).revision===revisions[id]),'This understanding changed. Ask Astrid again.',409);d.browseAdvice??=[];d.browseAdvice.push({id:uid('advice'),participantId:id,otherId,reviewId:review.id,revisions,status,topics,text:textValue(advice.text,2400),metadata:advice.metadata,createdAt:now()});});
       return {other:publicProfile(b),assessment:{status,text:advice.text,canRequest,reviewId:review.id,revisions,proposalId:existing?.id}};
     } finally {this.browseBusy.delete(key);}
+  }
+  async discussAdvice(id,otherId,reviewId) {
+    return this.repo.transact(s=>{
+      const a=participant(s,id),b=participant(s,otherId);
+      const advice=[...(s.browseAdvice||[])].reverse().find(x=>x.participantId===id&&x.otherId===otherId&&x.reviewId===reviewId);
+      requireValue(advice&&advice.revisions[id]===a.revision&&advice.revisions[otherId]===b.revision,'Ask Astrid for an updated assessment first.',409);
+      const question=(advice.topics||[]).map(x=>facetFor(x.facet)?.question).find(Boolean);
+      const text=`About ${b.name}: ${advice.text}${question&&!advice.text.trim().endsWith('?')?'\n\n'+question:''}`;
+      const existing=s.messages.find(m=>m.chatId===`astrid-${id}`&&m.adviceId===advice.id);
+      if(existing)return {message:existing};
+      const m=message(s,`astrid-${id}`,'astrid','assistant',text);m.adviceId=advice.id;
+      return {message:m};
+    });
   }
   async browseInterest(id,otherId,reviewId) {
     const key=[id,otherId].sort().join(':')+':interest';this.browseBusy??=new Set();requireValue(!this.browseBusy.has(key),'An introduction is already being prepared.',409);this.browseBusy.add(key);

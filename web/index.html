@@ -10,14 +10,14 @@
   <header class="masthead">
     <a class="wordmark" href="/" aria-label="Astrid for Love">astrid<span class="brand-star" aria-hidden="true">✷</span><small>for love</small></a>
     <span class="masthead-note">The bureau of unexpected chemistry.</span>
-    <button id="notebook-toggle" class="notebook-toggle" aria-expanded="false" aria-controls="notebook">My notebook <span aria-hidden="true">↗</span></button>
+    <button id="notebook-toggle" class="notebook-toggle" aria-expanded="false" aria-controls="notebook">Your lore <span aria-hidden="true">↗</span></button>
   </header>
   <div id="error" class="error-banner" role="alert" hidden></div>
   <main id="workspace" class="workspace">
     <aside class="sidebar">
       <div class="sidebar-intro"><span class="club-mark" aria-hidden="true">↯</span><p id="your-corner">You’re on the list.</p></div>
       <div id="conversation-nav"></div>
-      <div class="sidebar-bottom"><div class="little-note"><span class="club-stamp">NO BORING<br>LOVE STORIES</span><p>Come for the face.<br>Stay for the <em>plot.</em></p></div><button id="review-matches" class="button subtle">Find me a plot twist <span aria-hidden="true">↗</span></button><p class="fineprint">Only when you both say yes.</p></div>
+      <div class="sidebar-bottom"><h2 class="plot-heading">Your potential plot twists</h2><section id="potential-people" class="potential-people" aria-label="Potential connections"></section><button id="review-matches" class="text-button">Refresh matches</button></div>
     </aside>
 
     <section id="chat-panel" class="chat-panel">
@@ -25,15 +25,16 @@
       <div id="chat-content" class="chat-content" aria-live="polite"></div>
       <div id="typing" class="typing" hidden><img src="/assets/portraits/astrid-illustrated.png" alt=""> Astrid is thinking<span class="dots">…</span></div>
       <form id="composer" class="composer"><div class="composer-input"><label class="sr-only" for="message-input">Your message</label><textarea id="message-input" rows="1" placeholder="Tell me what’s on your mind…" maxlength="12000"></textarea><button type="submit" id="send" aria-label="Send message">↑</button></div><p id="composer-note">Just between you and Astrid.</p></form>
-      <section id="potential-people" class="potential-people" aria-label="Potential connections"></section>
+
+  <section id="person-dialog" class="person-dialog" hidden><button id="person-close" class="close-person" aria-label="Close profile">×</button><section id="discover-panel" class="discover-panel" aria-label="Profile and Astrid’s assessment"></section></section>
     </section>
   </main>
-  <aside id="notebook" class="understanding" hidden aria-label="Your notebook">
+  <aside id="notebook" class="understanding" hidden aria-label="Your lore">
     <div class="understanding-header"><button id="notebook-close" class="close-notebook" aria-label="Close notebook">×</button><span class="notebook-kicker">a work in progress, like all good characters</span><h2>Your <em>lore.</em></h2><p>What Astrid knows. Tap a note to set her straight.</p></div>
-    <div id="knowledge"></div><button id="notebook-matching" class="button subtle notebook-matching">Find me a plot twist ↗</button>
+    <div id="knowledge"></div><button id="notebook-matching" class="button subtle notebook-matching">Refresh matches</button>
   </aside>
   <main id="presenter" class="presenter" hidden></main>
-  <dialog id="person-dialog" class="person-dialog"><button id="person-close" class="close-person" aria-label="Close profile">×</button><section id="discover-panel" class="discover-panel" aria-label="Profile and Astrid’s assessment"></section></dialog>
+
   <dialog id="editor"><form id="editor-form"></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <script type="module" src="/app.js"></script>

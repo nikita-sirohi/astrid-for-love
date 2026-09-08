@@ -35,7 +35,7 @@ async function mutate(path, method, body, success) {
 function draftKey() { return `${activeId}/${conversation}`; }
 function saveDraft() { if(activeId) drafts.set(draftKey(), $('#message-input').value); }
 function resetSignatures() { chatSignature = ''; knowledgeSignature = ''; }
-function selectConversation(id) { $('#person-dialog').close(); saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); if(id==='discover')refresh(true); }
+function selectConversation(id) { $('#person-dialog').hidden=true; saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); if(id==='discover')refresh(true); }
 function renderNav() {
   const nav = $('#conversation-nav');
   const item = (id, person, title, subtitle) => append(button('',`conversation-button ${conversation === id ? 'active' : ''}`,() => selectConversation(id)),avatar(person),append(el('span'),el('strong','',title),el('small','',subtitle)));
@@ -53,17 +53,17 @@ function renderDiscover() {
   for(const person of discoverProfiles.filter(p=>p.id===selectedPerson)) {
     const card=el('article','person-card');card.dataset.personId=person.id;
     const portrait=el('div','person-portrait');const photo=el('img');photo.src=person.photo||'';photo.alt=person.name;photo.style.objectPosition=person.photoPosition||'center';portrait.append(avatar(person,'profile-art'));card.append(portrait);
-    const body=el('div','person-copy');body.append(el('h3','',`${person.name}, ${person.age}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
+    const body=el('div','person-copy');body.append(el('h3','',`${person.name}${person.age?' · '+person.age:''}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
     const interests=el('div','interest-notes');for(const interest of person.interests||[])interests.append(el('span','',interest));body.append(interests);
     const assessment=assessments.get(person.id),busy=adviceBusy.has(person.id);
     const ask=button(busy?'Astrid is forming an opinion…':assessment?'Ask Astrid again ↗':'Astrid, thoughts? ↗','button ask-astrid',async()=>{
       adviceBusy.add(person.id);renderDiscover();
-      try {const result=await api(`/api/participants/${activeId}/discover/${person.id}/advice`,{method:'POST',body:{}});assessments.set(person.id,result.assessment);}
+      try {const result=await api(`/api/participants/${activeId}/discover/${person.id}/advice`,{method:'POST',body:{}});assessments.set(person.id,result.assessment);await refresh(true);}
       catch(error){showError(error.message);}finally{adviceBusy.delete(person.id);renderDiscover();}
     });ask.disabled=busy;body.append(ask);
     if(assessment) {
       const note=el('div',`astrid-assessment ${assessment.status}`);
-      note.append(append(el('div','assessment-heading'),avatar(null),el('strong','',({promising:'I see the appeal.',explore:'There’s a plot twist.',hold:'I’d hold this one.'})[assessment.status]||'My take.')),el('p','',assessment.text));
+      note.append(append(el('div','assessment-heading'),avatar(null),el('strong','',({promising:'I see the appeal.',explore:'There’s a plot twist.',hold:'Before you connect…'})[assessment.status]||'My take.')),el('p','',assessment.text));
       const proposal=data.proposals.find(p=>p.id===assessment.proposalId || p.participantIds.includes(person.id)&&['pending','introduced'].includes(p.status));
       if(proposal)note.append(button(proposal.status==='introduced'?'Open your conversation ↗':'See your introduction ↗','button',()=>selectConversation(proposal.status==='introduced'?proposal.chatId:'proposals')));
       else if(assessment.canRequest)note.append(button('I’m interested ↗','button',async event=>{
@@ -71,7 +71,7 @@ function renderDiscover() {
         try {await api(`/api/participants/${activeId}/discover/${person.id}/interest`,{method:'POST',body:{reviewId:assessment.reviewId}});await refresh(true);selectConversation('proposals');}
         catch(error){showError(error.message);control.disabled=false;}
       }));
-      else note.append(button('Talk it through with Astrid','text-button',()=>{selectConversation('astrid');$('#message-input').focus();}));
+      else note.append(button('Talk it through with Astrid','text-button',async()=>{try{await api(`/api/participants/${activeId}/discover/${person.id}/discuss`,{method:'POST',body:{reviewId:assessment.reviewId}});selectConversation('astrid');await refresh(true);$('#chat-content').scrollTop=$('#chat-content').scrollHeight;$('#message-input').focus();}catch(error){showError(error.message);}}));
       body.append(note);
     }
     card.append(body);grid.append(card);
@@ -169,14 +169,14 @@ function renderKnowledge() {
   const settings=el('details','more-lore');settings.append(el('summary','','Matching & sharing'),button('Preferences & visibility','text-button',profileDialog));target.append(settings);
 }
 function renderPotentials() {
- const target=$('#potential-people');target.replaceChildren(el('span','eyebrow','POSSIBLE PLOT TWISTS'));
+ const target=$('#potential-people');target.replaceChildren();
  const row=el('div','potential-row');
  for(const person of discoverProfiles.filter(p=>!data.chats.some(c=>c.other.id===p.id))) {
-   const control=append(button('','potential-person',()=>{selectedPerson=person.id;discoverSignature='';renderDiscover();$('#person-dialog').showModal();if(!assessments.has(person.id))$('#discover-panel .ask-astrid')?.click();}),avatar(person),el('span','',person.name));row.append(control);
+   const control=append(button('','potential-person',()=>{selectedPerson=person.id;discoverSignature='';renderDiscover();$('#person-dialog').hidden=false;if(!assessments.has(person.id))$('#discover-panel .ask-astrid')?.click();}),avatar(person),append(el('span'),el('strong','',person.name),el('small','',({promising:'Promising',explore:'Worth exploring',hold:'Needs a closer look',unknown:'Still getting to know you'})[person.matchStatus]||'Not assessed')));row.append(control);
  }
  if(!row.children.length)row.append(el('p','fineprint','The next plot twist is still out there.'));target.append(row);
 }
-function render() { if(!data) return; $('#your-corner').textContent=`${data.participant.name.split(' ')[0]}’s clubhouse`;renderNav();renderHeading();renderChat();renderKnowledge();renderPotentials();if($('#person-dialog').open)renderDiscover(); }
+function render() { if(!data) return; $('#your-corner').textContent=`${data.participant.name.split(' ')[0]}’s clubhouse`;renderNav();renderHeading();renderChat();renderKnowledge();renderPotentials();if(!$('#person-dialog').hidden)renderDiscover(); }
 function field(label,type,value,options) {
   const wrap = el('label','field',label); const input = el(type === 'textarea' ? 'textarea' : type === 'select' ? 'select' : 'input');
   if(type === 'select') for(const [id,name] of options) { const option = el('option','',name); option.value = id; input.append(option); }
@@ -260,7 +260,7 @@ $('#message-input').addEventListener('input',saveDraft);
 $('#message-input').addEventListener('keydown',event=>{ if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing) { event.preventDefault(); $('#composer').requestSubmit(); } });
 $('#review-matches').addEventListener('click',startMatching);
 $('#notebook-matching').addEventListener('click',startMatching);
-$('#person-close').addEventListener('click',()=>$('#person-dialog').close());
+$('#person-close').addEventListener('click',()=>$('#person-dialog').hidden=true);
 
 function toggleNotebook(open) { $('#notebook').hidden=!open;$('#notebook-toggle').setAttribute('aria-expanded',String(open)); }
 $('#notebook-toggle').addEventListener('click',()=>toggleNotebook($('#notebook').hidden));

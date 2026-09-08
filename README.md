@@ -24,7 +24,7 @@ The offline command uses scripted agent responses; the personal interface stays 
 
 One process binds to `127.0.0.1` on ports 4310–4314 (or consecutively from `PORT`). Participant ports enforce a fixed identity and exclude operator endpoints; these local windows are not production authentication. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
 
-Start in Eli’s window: select Elena beneath the chat to see her illustrated portrait and Astrid’s assessment, then express interest. Elena must separately accept before a shared chat opens. Live assessments can vary; the offline pool demonstrates an ordinary planning-versus-spontaneity uncertainty. Maya demonstrates a hold while baseline understanding is incomplete. Browse smoke state is isolated under `.local/browse-smoke/`.
+Start in Eli’s window: select Elena in Your potential plot twists to see her illustrated portrait and Astrid’s assessment, then express interest. Elena must separately accept before a shared chat opens. Live assessments can vary; the offline pool demonstrates an ordinary planning-versus-spontaneity uncertainty. Maya demonstrates a hold while baseline understanding is incomplete. Browse smoke state is isolated under `.local/browse-smoke/`.
 
 ## What is implemented
 
@@ -98,3 +98,7 @@ npm run chat:memy -- --session first-memy-conversation --message "Hi"
 ```
 
 Reuse the session ID for later messages, or pass `--file PATH`. State stays under ignored `.local/memy-sessions/`; matching is disabled in this personal lab. The original `npm run chat` remains the single-agent comparison laboratory. Restart an existing web server to load the new architecture.
+
+Live startup/reset now uses `fixtures/people.json`: illustrated character shells with no invented ages, attraction preferences, biographies, interests, or relationship memories. Learn those from actual conversations. Explicitly scripted offline mode and automated tests retain `fixtures/demo.json` for repeatable branches. The local character shells may be browsed while basics are unknown; introductions remain blocked by normal eligibility and readiness checks.
+
+**Your lore** displays actual understanding. **Your potential plot twists** is a scrollable inline list ordered by fresh review disposition: promising, exploratory, unassessed, then held, with alphabetical ties and no invented probabilities. Selecting a person opens an inline assessment. **Talk it through with Astrid** persists that private explanation and a concrete own-expectation question in the Astrid chat; it does not fabricate a user message or memory.

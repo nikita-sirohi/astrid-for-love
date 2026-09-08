@@ -18,7 +18,7 @@ test('application prompt keeps role examples, replaces laboratory limitations, a
   assert.doesNotMatch(prompt.instructions, /local prompt laboratory|No application tools are available/);
   assert.match(prompt.instructions, /one bounded application task/);
   assert.equal(prompt.hash.length, 64);
-  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.4.0.md');
+  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.5.0.md');
 });
 
 test('converse whitelists own context and strips private matching rationale from clarifications', async () => {
