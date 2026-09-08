@@ -1,0 +1,15 @@
+Fictional prompt-test review. These are not real people. No proposal should be delivered.
+Review ID: family-001. All participants are adults, opted in, in the same city, mutually eligible by stated dating preferences, seeking a monogamous long-term relationship. Attraction is not established. Other baseline topics remain unknown unless stated below.
+
+Alex, revision 1:
+- Evidence alex-1, confirmed: My dependent mother must eventually be able to live with me. This is firm.
+- Evidence alex-2, confirmed: I will fund professional care. I do not expect my partner to become her caregiver.
+
+Sam, revision 1:
+- Evidence sam-1, confirmed: I need our home to be ours. I am close to my family but don't want relatives running our life.
+- Sam has not clarified whether separate living space or professional care would change the answer.
+
+Taylor, revision 1:
+- Evidence taylor-1, confirmed: I will never live with a partner's parent, even with a separate apartment. This is a firm requirement.
+
+Review the candidates for Alex. Identify the most useful clarification, distinguish uncertain fit from a confirmed conflict, and give Astrid a participant-safe question brief. Do not assume the missing baseline is covered.
