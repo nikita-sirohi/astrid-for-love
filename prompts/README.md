@@ -42,3 +42,13 @@ Astrid v0.5.0 has now been exercised in the full ten-case regression run with Ma
 After a behavioral prompt change, run `npm run eval` against the selected versions and manually review all ten cases against their existing rubrics. Keep this regression step separate from the five offline runtime tests and from live conversation testing. Record exact versions, evidence, failures, and limitations. Use explicit version flags to compare earlier prompts; the historical `eval:unseen` command still pins v0.2.0. Known teaching examples and previously used cases are not new generalization evidence.
 
 Review revisions against the product demo and its branches: natural story-led probing; baseline gaps; polished evasions; an apparent mismatch clarified; a firm mismatch withheld; a no-spark decline; permission before uncertain sharing; corrected memory changing a match; and double opt-in followed by Astrid leaving the shared chat. These are review scenarios, not claims that the prompts have been evaluated.
+
+## Astrid v0.7.0
+
+Selected after live development feedback on v0.6.0: group missing age and gender basics briefly, leave registration logistics to the profile UI, then return to experience and values. Clear replies need no routine paraphrase. Uses unchanged examples v0.3.0; v0.6.0 and paused session live-with-user-05 stay frozen. This conversation is development feedback, not unseen evaluation. Ten-case regression completed; see [review and limitations](../evals/RESULTS_REGRESSION_0_7_0.md). Fresh live pacing validation remains pending.
+
+## Memy and Astrid v0.8.0
+
+Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 removes memory-output and coverage-administration responsibilities; unchanged examples v0.3.0 remain selected. Application overlay v0.2.0 defines separated tasks. Earlier role and runtime prompts remain frozen. The personal `chat:memy` command exercises the actual sequential loop; the original lab/evals exercise role prompts in isolation.
+
+Memy integration and v0.8.0 role regression results: [validation and limits](../evals/RESULTS_MEMY_0_1_0.md).

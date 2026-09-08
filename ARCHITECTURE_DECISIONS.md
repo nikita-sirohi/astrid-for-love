@@ -110,3 +110,9 @@ Offline mode is visibly scripted and exercises state transitions without a provi
 - Post-date learning and private check-in scheduling.
 - Further ethical boundary examples and live prompt improvements. Existing evals are known regressions, including the two conversation-derived cases; they do not replace long live conversations.
 - Open-source license selection and attribution review for any future reused code/assets.
+
+## AD-012: Sequential Memy understanding before Astrid
+
+Memy owns evidence-backed memory suggestions, clarification status and at most two consequential gaps. On each user turn the application saves the message, calls Memy, validates and commits updates with a participant revision check, then calls Astrid with fresh memory and recent conversation. Astrid returns reply and permission requests only. Gaps are advisory, not interview assignments. Matchy runs independently from committed changes.
+
+Memy failure prevents a stale Astrid reply; Astrid failure retains already committed memory. Concurrent user edits invalidate in-flight results. The extra call adds measured latency; asynchronous memory extraction is not used. The existing topic-based memory representation remains a demo limitation, not solved by adding Memy.

@@ -49,7 +49,8 @@ JSON throughout; errors {error}. Participant-scoped routes require X-Participant
 
 `createAgents({mode:'live'|'offline'})` returns:
 
-- `converse({participant,memories,messages,clarifications,permissionRecipients=[]})` → {reply,memories:[{id?:existingId,topic,text,status,strength,evidenceIds:[]}],permissions:[{memoryId,recipientId}],clarificationUpdates:[{id,status}],metadata}. Messages include latest user message. Only own context supplied. Agent must never assert an unconfirmed write; root commits validated changes with response.
+- `understand({participant,memories,messages,clarifications})` → {memories:[{id?:existingId,topic,text,status,strength,evidenceIds:[]}],clarificationUpdates:[{id,status}],gaps:[{topic,reason}],metadata}. Memy runs first; validated changes commit before Astrid.
+- `converse({participant,memories,messages,clarifications,understanding:{gaps},permissionRecipients=[]})` → {reply,permissions:[{memoryId,recipientId}],metadata}. Astrid reads freshly committed own context and cannot write memory. The application checks participant revision at both commit boundaries.
 - `review({participants:[a,b],memories,previousReviews=[]})` → {decision:'propose'|'needs_clarification'|'withhold',reason,evidenceIds:[],clarifications:[{participantId,topic}],metadata}. Only candidate pair snapshots. Domain performs deterministic eligibility, readiness, previous decline, consent, and revision checks outside model.
 - `introduce({recipient,other,shareableMemories=[]})` → {text,metadata}. Only approved public data passed; generate 2–3 sentences with spark. No private pair rationale.
 - `checkin({participant,other,memories,messages})` → {reply,metadata}. Own private context, no shared messages; encourage self-disclosure without inventing knowledge of encounter.

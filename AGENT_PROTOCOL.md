@@ -91,3 +91,7 @@ See [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the implemented lifecycle. A 
 - Private check-in scheduling and notification behavior.
 - Automatic expiration, reopening declined proposals, and handling changed understanding after an introduction already exists.
 - Concrete ethical refusal examples beyond the already-established violence, abuse, and coercion boundaries.
+
+## Implemented Memy handoff
+
+The current app adds Memy v0.1.0 before Astrid v0.8.0. `understand(ownContext)` returns memory suggestions with user evidence IDs, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. This does not yet implement the richer semantic clarification protocol above.

@@ -96,7 +96,7 @@ test('permission grants are content-version and recipient scoped; denial and edi
 
 test('corrections suppress older messages and resist agent resurrection; deletion blocks topic writes', async t => {
   const contexts = [];
-  const { app, repository } = await setup(t, { converse: async context => {
+  const { app, repository } = await setup(t, { understand: async context => {
     contexts.push(context);
     const evidence = context.messages.filter(m => m.role === 'user').at(-1).id;
     return { reply: 'What matters most about that?', memories: [{ topic: 'family', text: 'Resurrected old assumption', status: 'confirmed', strength: 'requires', evidenceIds: [evidence] }] };

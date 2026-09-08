@@ -11,11 +11,11 @@ const array = (items, maxItems = 20) => ({ type: 'array', items, maxItems });
 const object = properties => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
 const topic = enumeration(topics);
 const schemas = {
-  converse: object({ reply: string,
-    memories: array(object({ id: { type: ['string', 'null'] }, topic, text: string,
+  converse: object({ reply: string, permissions: array(object({ memoryId: string, recipientId: string })) }),
+  understand: object({ memories: array(object({ id: { type: ['string', 'null'] }, topic, text: string,
       status: enumeration(['confirmed', 'tentative']), strength: enumeration(['requires', 'prefers', 'accepts', 'unknown']), evidenceIds: array(string) })),
-    permissions: array(object({ memoryId: string, recipientId: string })),
-    clarificationUpdates: array(object({ id: string, status: enumeration(['answered', 'deferred', 'declined', 'obsolete']) })) }),
+    clarificationUpdates: array(object({ id: string, status: enumeration(['answered', 'deferred', 'declined', 'obsolete']) })),
+    gaps: array(object({ topic, reason: { type: 'string', minLength: 1, maxLength: 600 } }), 2) }),
   review: object({ decision: enumeration(['propose', 'needs_clarification', 'withhold']), reason: string,
     evidenceIds: array(string, 100), clarifications: array(object({ participantId: string, topic })) }),
   introduce: object({ text: string }),
@@ -33,14 +33,22 @@ function validate(value, schema) {
     && (!schema.minLength || value.trim().length >= schema.minLength) && (!schema.maxLength || value.length <= schema.maxLength);
 }
 
-export async function applicationPrompt(role, version = selectedVersions[role]) {
+export async function applicationPrompt(role, version = role === 'memy' ? '0.1.0' : selectedVersions[role]) {
+  if (role === 'memy') {
+    if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid Memy prompt version.');
+    const file = `memy/v${version}.md`;
+    const source = await readFile(new URL(`../prompts/${file}`, import.meta.url), 'utf8');
+    const instructions = source.split('## Prompt body\n')[1];
+    if (!instructions) throw new Error('Application prompt assembly failed.');
+    return { instructions, assets: [{ file, hash: hash(source) }], hash: hash(instructions) };
+  }
   const lab = await promptFor(role, version);
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.1.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.2.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.1.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.2.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -87,8 +95,12 @@ function contextFor(task, args) {
   const context = { participant: ownProfile(args.participant), memories: ownMemories(args.memories || [], args.participant.id),
     messages: ownMessages(args.messages || [], args.participant.id) };
   if (task === 'checkin') return { ...context, other: publicProfile(args.other) };
-  return { ...context, clarifications: (args.clarifications || []).filter(item => item.participantId === args.participant.id)
-    .map(item => pick(item, ['id', 'participantId', 'topic', 'status'])), permissionRecipients: (args.permissionRecipients || []).map(publicProfile) };
+  const privateContext = { ...context, clarifications: (args.clarifications || []).filter(item => item.participantId === args.participant.id)
+    .map(item => pick(item, ['id', 'participantId', 'topic', 'status'])) };
+  if (task === 'understand') return privateContext;
+  const gaps = (args.understanding?.gaps || []).filter(item => topics.includes(item.topic) && typeof item.reason === 'string')
+    .slice(0, 2).map(item => ({ topic: item.topic, reason: item.reason.slice(0, 600) }));
+  return { ...privateContext, understanding: { gaps }, permissionRecipients: (args.permissionRecipients || []).map(publicProfile) };
 }
 
 function validateReferences(task, data, context) {
@@ -99,15 +111,19 @@ function validateReferences(task, data, context) {
     if (data.decision === 'needs_clarification' && !data.clarifications.length) fail();
     if (data.decision === 'propose' && context.participants.some(person => !context.memories.some(memory => memory.participantId === person.id && data.evidenceIds.includes(memory.id)))) fail();
   }
-  if (task !== 'converse') return;
+  if (task === 'converse') {
+    for (const permission of data.permissions) {
+      if (!context.memories.some(memory => memory.id === permission.memoryId) || !context.permissionRecipients.some(person => person.id === permission.recipientId)) fail();
+    }
+    return;
+  }
+  if (task !== 'understand') return;
   const userEvidence = new Set(context.messages.filter(message => message.role === 'user' && message.authorId === context.participant.id).map(message => message.id));
   for (const memory of data.memories) {
     if (!memory.evidenceIds.length || memory.evidenceIds.some(id => !userEvidence.has(id))) fail();
-    if (memory.id && !context.memories.some(existing => existing.id === memory.id && !existing.userLocked && !existing.locked)) fail();
+    if (context.memories.some(existing => existing.topic === memory.topic && (existing.userLocked || existing.locked))) fail();
+    if (memory.id && !context.memories.some(existing => existing.id === memory.id && existing.topic === memory.topic && !existing.userLocked && !existing.locked)) fail();
     if (memory.id === null) delete memory.id;
-  }
-  for (const permission of data.permissions) {
-    if (!context.memories.some(memory => memory.id === permission.memoryId) || !context.permissionRecipients.some(person => person.id === permission.recipientId)) fail();
   }
   for (const update of data.clarificationUpdates) {
     const clarification = context.clarifications.find(item => item.id === update.id && item.status === 'queued');
@@ -154,19 +170,22 @@ function scripted(task, context) {
   if (/(?:mother|father|parent).*(?:live|living|move|moving|stay)|(?:live|living|move|moving|stay).*(?:mother|father|parent)/i.test(text)) {
     const clear = /separate space/i.test(text) && /professional care/i.test(text) && /(?:not|no|don.t).*partner.*caregiv/i.test(text);
     const existing = context.memories.find(memory => memory.topic === 'family' && !memory.userLocked && !memory.locked);
-    result.memories.push({ ...(existing ? { id: existing.id } : {}), topic: 'family', text, status: clear ? 'confirmed' : 'tentative', strength: /dealbreaker|must|non.negotiable/i.test(text) ? 'requires' : 'unknown', evidenceIds: [latest.id] });
-    if (clear && clarification?.topic === 'family') result.clarificationUpdates.push({ id: clarification.id, status: 'answered' });
+    const locked = context.memories.some(memory => memory.topic === 'family' && (memory.userLocked || memory.locked));
+    if (!locked) result.memories.push({ ...(existing ? { id: existing.id } : {}), topic: 'family', text, status: clear ? 'confirmed' : 'tentative', strength: /dealbreaker|must|non.negotiable/i.test(text) ? 'requires' : 'unknown', evidenceIds: [latest.id] });
+    if (!locked && clear && clarification?.topic === 'family') result.clarificationUpdates.push({ id: clarification.id, status: 'answered' });
     result.reply = clear ? 'Separate space and professional care make the expectation much clearer. What would you want to understand about a partner’s own family obligations?' : 'What would your partner be agreeing to: sharing a home, helping with care, or both? And what would you make room for if the roles were reversed?';
   } else result.reply = questions[target];
-  return result;
+  if (task === 'understand') return { memories: result.memories, clarificationUpdates: result.clarificationUpdates, gaps: [] };
+  return { reply: result.reply, permissions: [] };
 }
 
 export function createAgents({ mode = 'live', client = structuredResponse, config, versions = selectedVersions, timeoutMs = 120000 } = {}) {
   if (!['live', 'offline'].includes(mode)) throw new Error('Unknown agent mode.');
+  const promptVersions = { ...selectedVersions, memy: '0.1.0', ...versions };
   async function run(task, args) {
     const context = contextFor(task, args);
-    const role = task === 'review' ? 'matchy' : 'astrid';
-    const prompt = await applicationPrompt(role, versions[role]);
+    const role = task === 'review' ? 'matchy' : task === 'understand' ? 'memy' : 'astrid';
+    const prompt = await applicationPrompt(role, promptVersions[role]);
     const started = Date.now();
     let result;
     if (mode === 'offline') result = { data: scripted(task, context), model: 'scripted-demo' };
@@ -180,11 +199,11 @@ export function createAgents({ mode = 'live', client = structuredResponse, confi
       }
     }
     // Offline suggestions omit optional IDs; the wire format uses nullable required IDs.
-    if (task === 'converse') for (const memory of result.data?.memories || []) memory.id ??= null;
+    if (task === 'understand') for (const memory of result.data?.memories || []) memory.id ??= null;
     if (!validate(result.data, schemas[task])) throw new Error('Invalid agent response.');
     validateReferences(task, result.data, context);
     return { ...result.data, metadata: { mode, model: result.model || config?.model || 'gpt-6-astra',
-      prompt: { role, version: versions[role], hash: prompt.hash, assets: prompt.assets }, task,
+      prompt: { role, version: promptVersions[role], hash: prompt.hash, assets: prompt.assets }, task,
       responseId: result.id || null, usage: result.usage || null, durationMs: Date.now() - started,
       ...(mode === 'offline' ? { label: 'Scripted demo — not model output' } : {}) } };
   }

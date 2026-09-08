@@ -44,7 +44,7 @@ npm run chat -- --session first-conversation
 npm run chat -- --role matchy --session review-one --file fixtures/matchy-review.txt
 ```
 
-Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.6.0 with conversation examples v0.3.0, and Matchy v0.4.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
+Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.8.0 with conversation examples v0.3.0, and Matchy v0.4.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
 
 ## Validate
 
@@ -81,3 +81,15 @@ Requests use the Responses API with `store: false`; this does not itself guarant
 - `fixtures/demo.json`: fictional participant pool; [portrait provenance](web/assets/portraits/README.md).
 
 No neighboring checkout is required, and no source code was copied from agent-loop. Repository license selection remains open.
+
+## Try the Memy conversation loop
+
+The app now runs **user → Memy → committed understanding → Astrid**, with Matchy working separately. Memy records evidence and flags consequential gaps; Astrid owns the conversation. A failed Memy call stops the reply; a failed Astrid call leaves committed memory intact. Existing topic-granularity limitations remain; see [demo gap report](DEMO_GAP_REPORT.md).
+
+For a fresh personal conversation through this same loop, without fictional profile memories:
+
+```sh
+npm run chat:memy -- --session first-memy-conversation --message "Hi"
+```
+
+Reuse the session ID for later messages, or pass `--file PATH`. State stays under ignored `.local/memy-sessions/`; matching is disabled in this personal lab. The original `npm run chat` remains the single-agent comparison laboratory. Restart an existing web server to load the new architecture.

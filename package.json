@@ -14,6 +14,7 @@
     "eval:unseen": "node src/evaluate.mjs --astrid-version 0.2.0 --matchy-version 0.2.0",
     "start": "node src/server.mjs",
     "dev": "node src/server.mjs",
-    "demo:offline": "ASTRID_MODE=offline node src/server.mjs"
+    "demo:offline": "ASTRID_MODE=offline node src/server.mjs",
+    "chat:memy": "node src/memy-chat.mjs"
   }
 }

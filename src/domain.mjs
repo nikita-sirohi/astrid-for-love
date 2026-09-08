@@ -87,10 +87,10 @@ export class AstridApp {
     try {
       input=await this.repo.transact(s=>{participant(s,id); return message(s,`astrid-${id}`,id,'user',text);});
       const s=await this.repo.read(); const revision=participant(s,id).revision;
-      const result=await this.agents.converse(this.ownContext(s,id));
-      return await this.repo.transact(d=>{
+      const result=await this.agents.understand(this.ownContext(s,id));
+      const memoryUpdates=await this.repo.transact(d=>{
         const p=participant(d,id); requireValue(p.revision===revision,'Your understanding changed while Astrid was replying. Send another message to continue with the updated context.',409);
-        const replyText=textValue(result.reply); const updates=[];
+        const updates=[];
         const validEvidence=new Set(this.ownContext(d,id).messages.filter(m=>m.role==='user').map(m=>m.id));
         for(const candidate of (result.memories||[]).slice(0,8)) {
           if(!topics.some(t=>t.id===candidate.topic)||typeof candidate.text!=='string'||!candidate.text.trim()) continue;
@@ -105,11 +105,21 @@ export class AstridApp {
         }
         for(const update of result.clarificationUpdates||[]) {const c=d.clarifications.find(c=>c.id===update.id&&c.participantId===id&&c.status==='queued'); if(c&&['answered','deferred','declined'].includes(update.status)) c.status=update.status;}
         if(updates.length) { invalidate(d,p,'conversation clarified an expectation',updates.map(m=>m.topic)); enqueue(d,id); }
-        for(const request of result.permissions||[]) {
+        return updates;
+      });
+      const current=await this.repo.read(); const currentRevision=participant(current,id).revision;
+      requireValue(currentRevision===revision+(memoryUpdates.length?1:0),'Your understanding changed while Memy was recording it. Send another message to continue.',409);
+      const understanding={gaps:(result.gaps||[]).filter(g=>topics.some(t=>t.id===g.topic)&&typeof g.reason==='string').slice(0,3)};
+      const response=await this.agents.converse({...this.ownContext(current,id),understanding});
+      return await this.repo.transact(d=>{
+        requireValue(participant(d,id).revision===currentRevision,'Your understanding changed while Astrid was replying. Send another message to continue with the updated context.',409);
+        for(const request of response.permissions||[]) {
           if(d.memories.some(m=>m.id===request.memoryId&&m.participantId===id&&!m.deleted)&&d.participants.some(p=>p.id===request.recipientId&&p.id!==id)) this.addPermission(d,id,request);
         }
-        const reply=message(d,`astrid-${id}`,'astrid','assistant',replyText);reply.metadata=result.metadata;
-        return {message:input,reply,memoryUpdates:updates};
+        const reply=message(d,`astrid-${id}`,'astrid','assistant',textValue(response.reply));
+        reply.metadata=response.metadata;
+        reply.understandingMetadata=result.metadata;
+        return {message:input,reply,memoryUpdates};
       });
     } finally { this.busy.delete(id); this.kick(); }
   }
