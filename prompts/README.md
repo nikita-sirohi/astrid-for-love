@@ -7,7 +7,7 @@ These versioned behavioral prompts run within the application’s bounded agent 
 | Astrid | [v0.8.0](astrid/v0.8.0.md) | Conversation and participant-facing matchmaking |
 | Matchy | [v0.8.0](matchy/v0.8.0.md) | Private background compatibility reviews |
 | Memy | [v0.6.0](memy/v0.6.0.md) | Evidence-backed understanding and memory |
-| Runtime | [v0.9.0](runtime/v0.9.0.md) | Application tasks, tools and output contracts |
+| Runtime | [v0.10.0](runtime/v0.10.0.md) | Application tasks, tools and output contracts |
 
 Astrid's selected companion is [conversation examples v0.3.0](astrid/examples.v0.3.0.md). The agents use the semantic handoff contract in [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md), currently v0.1.0. Earlier role drafts remain available for comparison.
 
@@ -53,7 +53,7 @@ Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 remov
 
 ## Current application contracts
 
-Astrid v0.8.0, Memy v0.6.0, Matchy v0.8.0, runtime v0.9.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
+Astrid v0.8.0, Memy v0.6.0, Matchy v0.8.0, runtime v0.10.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
 
 Matchy v0.6.0 distinguishes ordinary uncertainty that permits exploration from firm conflicts and incomplete baselines that hold introductions. Runtime v0.4.0 adds Astrid’s participant-safe browsing advice task; it receives public profile information, authorized stories, and recipient-owned discussion topics, never the private pair rationale.
 
@@ -64,3 +64,5 @@ Memy v0.4.0 asks for concise atomic learnings, revision of the same expectation 
 Memy v0.5.0 and runtime v0.8.0 enable bounded role-scoped function calling. Memy commits through a tool and observes its receipt before Astrid replies; Astrid may inspect or request matching and create scoped sharing requests. Matchy may inspect records and validate its decision. Existing role prompts retain their voice. The role-only lab/evals do not exercise these application tools.
 
 Memy v0.6.0 classifies substantive topic understanding separately from incidental facts. Matchy v0.8.0 uses seven topic baselines, examines consequential uncertainty, and gives each clarification a purpose (baseline, meaning, practical, flexibility, reciprocity, or repair). Runtime v0.9.0 carries those handoffs and adds a shared-opening task using only information authorized for both recipients. Sixteen facets remain diagnostic guides, not a registration checklist.
+
+Runtime v0.10.0 distinguishes a preliminary compatibility assessment from introduction permission. Browsing can show an exploratory assessment while consent controls remain unavailable; empty counterpart profiles are identified without re-interviewing the established participant.

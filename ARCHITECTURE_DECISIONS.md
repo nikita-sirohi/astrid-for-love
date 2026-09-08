@@ -64,7 +64,7 @@ Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Se
 - [Matchy v0.8.0](prompts/matchy/v0.8.0.md)
 - [Memy v0.6.0](prompts/memy/v0.6.0.md)
 
-See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.9.0](prompts/runtime/v0.9.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.10.0](prompts/runtime/v0.10.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 

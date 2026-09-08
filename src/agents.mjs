@@ -58,9 +58,9 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.6.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.9.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.10.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.9.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.10.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, tools = [], fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -117,7 +117,7 @@ function contextFor(task, args) {
     });
     return { participant: ownProfile(args.participant), memories, other: publicProfile(args.other),
       shareableMemories: (args.shareableMemories || []).filter(memory => !memory.deleted && memory.participantId === args.other.id).map(cleanMemory),
-      assessment: { status: args.assessment.status, topics: safeTopics, canRequest: args.assessment.status !== 'hold' && args.assessment.canRequest } };
+      assessment: { status: args.assessment.status, basis:['preliminary','other_unstarted','unassessed','reviewed'].includes(args.assessment.basis)?args.assessment.basis:'reviewed', topics: safeTopics, canRequest: args.assessment.status !== 'hold' && args.assessment.canRequest } };
   }
   if (task === 'introduce') return { recipient: publicProfile(args.recipient), other: publicProfile(args.other),
     // These records have already been permission-filtered for this recipient by the domain.

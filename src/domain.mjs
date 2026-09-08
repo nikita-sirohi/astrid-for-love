@@ -258,12 +258,17 @@ export class AstridApp {
     const rank={promising:0,explore:1,unknown:2,hold:3};
     const profiles=s.participants.filter(b=>b.id!==id&&b.discoverable===true&&(!eligibility(a,b)||(a.demoShell&&b.demoShell&&a.matchingEnabled&&b.matchingEnabled&&![a,b].some(p=>Number.isInteger(p.age)&&p.age<18)&&['Only adults can participate.','Dating preferences need clarification.','Distance preferences have not been established.'].includes(eligibility(a,b))))).map(b=>{
       const review=[...s.reviews].reverse().find(r=>[id,b.id].every(x=>r.participantIds.includes(x)&&r.revisions?.[x]===participant(s,x).revision));
-      const matchStatus=this.declinedPair(s,[id,b.id])?'hold':review?this.assessmentStatus(review):'unknown';
+      const matchStatus=this.declinedPair(s,[id,b.id])?'hold':review?this.browseStatus(s,a,b,review):'unknown';
       return {...publicProfile(b),matchStatus,comparison:{revisions:{[id]:a.revision,[b.id]:b.revision},pending:Boolean(a.understandingPending||b.understandingPending)}};
     }).sort((a,b)=>rank[a.matchStatus]-rank[b.matchStatus]||a.name.localeCompare(b.name));
     return {profiles};
   }
   assessmentStatus(review) {return review.decision==='propose'?'promising':review.decision==='needs_clarification'&&review.exploration==='allow'?'explore':'hold';}
+  browseStatus(s,a,b,review) {
+    const constraint=eligibility(a,b);
+    if(this.declinedPair(s,[a.id,b.id])||(constraint&&constraint!=='Distance preferences have not been established.'))return 'hold';
+    return review.phase==='preliminary'&&review.decision==='needs_clarification'?'explore':this.assessmentStatus(review);
+  }
   declinedPair(s,ids) {return s.proposals.some(p=>ids.every(id=>p.participantIds.includes(id))&&['declined','withdrawn'].includes(p.status));}
   async browseAdvice(id,otherId) {
     const key=[id,otherId].sort().join(':');this.browseBusy??=new Set();requireValue(!this.browseBusy.has(key),'Astrid is already considering this connection.',409);this.browseBusy.add(key);
@@ -285,13 +290,15 @@ export class AstridApp {
         });
       }
       const existing=s.proposals.find(p=>ids.every(id=>p.participantIds.includes(id))&&['pending','introduced'].includes(p.status));
-      const status=this.declinedPair(s,ids)||eligibility(a,b)?'hold':this.assessmentStatus(review);
-      const canRequest=status!=='hold'&&a.discoverable===true&&!existing;
+      const status=this.browseStatus(s,a,b,review);
+      const canRequest=this.assessmentStatus(review)!=='hold'&&!eligibility(a,b)&&a.discoverable===true&&!existing&&!this.declinedPair(s,ids);
+      const basis=b.demoShell&&!this.memoryStore.records(s,otherId).length?'other_unstarted':review.phase==='preliminary'?'preliminary':review.phase==='gated'?'unassessed':'reviewed';
       // Only the actor's own uncertainty goes to Astrid. Other-person concerns and
       // all pair rationale remain private even when they explain the match judgment.
       let topics=(review.clarifications||[]).filter(c=>c.participantId===id).map(c=>({facet:c.facet,purpose:c.purpose||'baseline',evidenceIds:(c.evidenceIds||[]).filter(e=>s.memories.some(m=>m.id===e&&m.participantId===id&&!m.deleted))}));
-      if(!topics.length&&status==='hold'&&!this.declinedPair(s,ids))topics=Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).slice(0,2).map(([facet])=>({facet,evidenceIds:[]}));
-      const advice=await this.agents.advise({participant:a,memories:this.memoryStore.records(s,id),other:publicProfile(b),shareableMemories:this.sharedMemories(s,otherId,id),assessment:{status,canRequest,topics}});
+      if(!topics.length&&status==='hold'&&!this.declinedPair(s,ids)&&review.decision!=='withhold')topics=Object.entries(topicUnderstanding(s,id)).filter(([,detail])=>detail.status!=='understood').slice(0,2).map(([topic])=>({facet:facets.find(f=>f.topic===topic).id,purpose:'baseline',evidenceIds:[]}));
+      if(basis==='other_unstarted')topics=[];
+      const advice=await this.agents.advise({participant:a,memories:this.memoryStore.records(s,id),other:publicProfile(b),shareableMemories:this.sharedMemories(s,otherId,id),assessment:{status,canRequest,topics,basis}});
       await this.repo.transact(d=>{requireValue(ids.every(id=>participant(d,id).revision===revisions[id]&&!participant(d,id).understandingPending),'This understanding changed. Ask Astrid again.',409);d.browseAdvice??=[];d.browseAdvice.push({id:uid('advice'),participantId:id,otherId,reviewId:review.id,revisions,status,topics,text:textValue(advice.text,2400),metadata:advice.metadata,createdAt:now()});});
       return {other:publicProfile(b),assessment:{status,text:advice.text,canRequest,reviewId:review.id,revisions,proposalId:existing?.id}};
     } finally {this.browseBusy.delete(key);}

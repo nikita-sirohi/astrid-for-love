@@ -96,3 +96,5 @@ Startup accepts --profiles N, --store PATH, --port N and --mode live|offline. Co
 ## Topic readiness
 
 `topicUnderstanding` reports understood, needs_exploration or not_discussed for each of seven relationship topics. At least one substantive confirmed belief marked understood establishes a topic baseline; stories and incidental records do not. Legacy confirmed facet records without a readiness value retain baseline credit. The sixteen facets remain diagnostics, not sixteen mandatory gates. Matchy still examines unresolved expectations and firm conflicts before allowing an introduction. User text/status edits clear stale readiness classification.
+
+A browsing assessment with `status: explore` may be preliminary. Clients must use `canRequest`, not the status label, to enable an introduction request. The server independently enforces readiness and eligibility.

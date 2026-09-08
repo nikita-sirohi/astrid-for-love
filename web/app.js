@@ -79,7 +79,7 @@ function renderDiscover() {
       } catch(error){if(current())showError(error.message);}
       finally{if(current()){adviceBusy.delete(person.id);renderDiscover();}}
     });ask.disabled=busy;body.append(ask);
-    if(!assessment) body.append(append(el('div','astrid-assessment hold'),append(el('div','assessment-heading'),avatar(null),el('strong','','My take.')),el('p','',data.memories.length ? 'I don’t have a settled view of your fit yet. I need to understand more before I can recommend connecting.' : 'I don’t know much about you yet, so I can’t tell how you two would fit. Tell me a little about yourself first.')));
+    if(!assessment) body.append(append(el('div','astrid-assessment hold'),append(el('div','assessment-heading'),avatar(null),el('strong','','My take.')),el('p','',data.memories.length ? 'I haven’t loaded your assessment yet. Ask me for a take on this person.' : 'I don’t know much about you yet, so I can’t tell how you two would fit. Tell me a little about yourself first.')));
     if(assessment) {
       const note=el('div',`astrid-assessment ${assessment.status}`);
       note.append(append(el('div','assessment-heading'),avatar(null),el('strong','',({promising:'I see the appeal.',explore:'There’s a plot twist.',hold:'Before you connect…'})[assessment.status]||'My take.')),el('p','',assessment.text));
