@@ -71,7 +71,7 @@ export class AstridApp {
   async bootstrap(actor) { const s=await this.repo.read(); const visible=p=>!actor||p.id===actor||p.discoverable===true||s.chats.some(c=>c.participantIds.includes(actor)&&c.participantIds.includes(p.id))||s.proposals.some(c=>c.participantIds.includes(actor)&&c.participantIds.includes(p.id)); return {participants:s.participants.filter(visible).map(publicProfile),mode:this.mode,topics,facets,fictional:true}; }
   async view(id) {
     const s=await this.repo.read(); const p=participant(s,id);
-    return {participant:p,memories:this.memoryStore.records(s,id),coverage:coverage(s,id),coverageDetails:coverageDetails(s,id),profileConflicts:p.profileConflicts||[],
+    return {resetId:p.resetId||null,participant:p,memories:this.memoryStore.records(s,id),coverage:coverage(s,id),coverageDetails:coverageDetails(s,id),profileConflicts:p.profileConflicts||[],
       messages:s.messages.filter(m=>m.chatId===`astrid-${id}`),
       proposals:s.proposals.filter(p=>p.participantIds.includes(id)).map(p=>({...p,introductions:{[id]:p.introductions[id]},other:publicProfile(participant(s,p.participantIds.find(x=>x!==id)))})),
       chats:s.chats.filter(c=>c.participantIds.includes(id)).map(c=>({...c,other:publicProfile(participant(s,c.participantIds.find(x=>x!==id))),messages:s.messages.filter(m=>m.chatId===c.id)})),
@@ -80,7 +80,7 @@ export class AstridApp {
   async presenter() { const s=await this.repo.read(); return {jobs:s.jobs,reviews:s.reviews,events:s.events,counts:{participants:s.participants.length,proposals:s.proposals.length,chats:s.chats.length},mode:this.mode}; }
   ownContext(s,id) {
     const p=participant(s,id); const privateMessages=s.messages.filter(m=>m.chatId===`astrid-${id}`);
-    return {participant:p,memories:this.memoryStore.records(s,id),memoryTombstones:s.memories.filter(m=>m.participantId===id&&m.deleted).map(({id,kind,storyType,topic,facet})=>({id,topic,facet,...(kind==='story'?{kind,storyType}:{})})),
+    return {resetId:p.resetId||null,participant:p,memories:this.memoryStore.records(s,id),memoryTombstones:s.memories.filter(m=>m.participantId===id&&m.deleted).map(({id,kind,storyType,topic,facet})=>({id,topic,facet,...(kind==='story'?{kind,storyType}:{})})),
       messages:privateMessages.slice(p.contextAfterMessageCount||0).slice(-40),
       clarifications:s.clarifications.filter(c=>c.participantId===id&&c.status==='queued').map(safeClarification).filter(Boolean),
       permissionRecipients:s.participants.filter(other=>other.id!==id&&other.discoverable===true&&!eligibility(p,other)).map(publicProfile)};
@@ -130,7 +130,7 @@ export class AstridApp {
   }
   async profile(id,patch) {
     const result=await this.repo.transact(s=>{const p=participant(s,id);p.profileFieldLocks??={};p.profileConflicts??=[];p.profileEvidence??={};
-      try {for(const field of [...profileFields,'bio'])if(patch[field]!==undefined){p[field]=profileValue(field,patch[field]);p.profileFieldLocks[field]=true;p.profileConflicts=p.profileConflicts.filter(c=>c.field!==field);p.profileEvidence[field]={source:'user_edit',evidenceIds:[]};}}catch(e){throw new AppError(e.message);}
+      try {for(const field of [...profileFields,'bio','name'])if(patch[field]!==undefined){p[field]=profileValue(field,patch[field]);p.profileFieldLocks[field]=true;p.profileConflicts=p.profileConflicts.filter(c=>c.field!==field);p.profileEvidence[field]={source:'user_edit',evidenceIds:[]};}}catch(e){throw new AppError(e.message);}
       if(patch.discoverable!==undefined){requireValue(typeof patch.discoverable==='boolean','Invalid profile visibility.');p.discoverable=patch.discoverable;}
       if(patch.matchingEnabled!==undefined){requireValue(typeof patch.matchingEnabled==='boolean','Invalid matching setting.');p.matchingEnabled=patch.matchingEnabled;}
       p.contextAfterMessageCount=s.messages.filter(m=>m.chatId===`astrid-${id}`).length;
@@ -363,6 +363,26 @@ export class AstridApp {
     try {const s=await this.repo.read();const p=participant(s,id);const ctx=this.ownContext(s,id);const result=await this.agents.checkin({...ctx,other:publicProfile(participant(s,chat.participantIds.find(x=>x!==id)))});
       return await this.repo.transact(d=>{requireValue(participant(d,id).revision===p.revision,'Understanding changed; retry the check-in.',409);return {reply:message(d,`astrid-${id}`,'astrid','assistant',textValue(result.reply))};});
     } finally {this.busy.delete(id);}
+  }
+  async matchingStatus(id,jobId) {const s=await this.repo.read();const job=s.jobs.find(j=>j.id===jobId&&j.participantId===id);requireValue(job,'Review not found.',404);return {job};}
+  async clearProfile(id) {
+    requireValue(!this.busy.has(id)&&!this.workerRunning&&!this.browseBusy?.size,'Wait for the active review or reply before clearing this profile.',409);
+    await this.repo.transact(s=>{
+      const p=participant(s,id),memoryIds=new Set(s.memories.filter(m=>m.participantId===id).map(m=>m.id));
+      const related=x=>x.participantIds?.includes(id);
+      const chatIds=new Set(s.chats.filter(related).map(c=>c.id));
+      const reviewIds=new Set(s.reviews.filter(related).map(r=>r.id));
+      const fresh={id:p.id,name:'',age:null,gender:'',pronouns:'',interestedIn:[],location:'',bio:'',photo:p.photo,photoPosition:p.photoPosition,interests:[],matchingEnabled:true,discoverable:true,demoShell:true,ageRange:null,revision:p.revision+1,resetId:uid('reset')};
+      s.participants[s.participants.indexOf(p)]=fresh;
+      s.memories=s.memories.filter(m=>m.participantId!==id);
+      s.messages=s.messages.filter(m=>m.chatId!==`astrid-${id}`&&!chatIds.has(m.chatId));
+      for(const key of ['chats','proposals','reviews'])s[key]=s[key].filter(x=>!related(x));
+      s.permissions=s.permissions.filter(x=>x.participantId!==id&&x.recipientId!==id&&!memoryIds.has(x.memoryId));
+      s.clarifications=s.clarifications.filter(x=>x.participantId!==id&&!x.evidenceIds?.some(e=>memoryIds.has(e)));
+      s.jobs=s.jobs.filter(j=>j.participantId!==id);for(const j of s.jobs)j.reviewIds=j.reviewIds?.filter(r=>!reviewIds.has(r))||[];
+      s.browseAdvice=(s.browseAdvice||[]).filter(x=>x.participantId!==id&&x.otherId!==id);
+      s.events=s.events.filter(e=>!e.detail?.includes(p.name||id)&&!e.detail?.includes(id));
+    });return {ok:true};
   }
   async reset() {requireValue(!this.busy.size&&!this.workerRunning&&!this.browseBusy?.size,'Wait for active conversations and reviews before resetting.',409);await this.repo.reset();return {ok:true};}
 }

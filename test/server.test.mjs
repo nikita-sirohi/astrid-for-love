@@ -15,6 +15,8 @@ test('HTTP API enforces private actors, rejects foreign origins, hides secrets, 
   const request=async(path,actor,method='GET',body)=>{const response=await fetch(url+path,{method,headers:{'Content-Type':'application/json',...(actor?{'X-Participant-Id':actor}:{})},body:body?JSON.stringify(body):undefined});return {status:response.status,data:await response.json()};};
   try {
     assert.equal((await request('/api/participants/maya','eli')).status,403);
+    assert.equal((await request('/api/participants/maya/clear','eli','POST',{})).status,403);
+    assert.equal((await request('/api/demo/clear','eli','POST',{})).status,404);
     assert.equal((await request('/api/participants/maya')).status,403);
     assert.equal((await fetch(url+'/api/demo/reset',{method:'POST',headers:{Origin:'https://foreign.example'}})).status,403);
     assert.equal((await fetch(url+'/.env')).status,404);

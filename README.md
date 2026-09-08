@@ -85,7 +85,7 @@ Requests use the Responses API with `store: false`; this does not itself guarant
 - `src/runtime.mjs` and `src/cli.mjs`: streaming prompt laboratory.
 - `fixtures/demo.json`: fictional participant pool; [portrait provenance](web/assets/portraits/README.md).
 
-No neighboring checkout is required, and no source code was copied from agent-loop. Repository license selection remains open.
+The application is self-contained. Repository license selection remains open.
 
 ## Try the Memy conversation loop
 
@@ -107,3 +107,5 @@ Live startup/reset now uses `fixtures/people.json`: illustrated character shells
 Story memory uses Memy v0.3.0 and runtime v0.6.0. Distinct passions, anecdotes, and humor are stored as private evidence-backed story records before Astrid replies. They appear in Your lore with creation/edit/removal controls and explicit uncertainty. Authorized stories may enrich introduction proposals; stories never satisfy readiness or become Matchy compatibility evidence.
 
 An unprocessed private turn now blocks new proposal publication and acceptance until understanding succeeds. This marker survives a failed extraction/restart; continuing the private conversation retries understanding with retained history. New private stories preserve pending acceptances because they do not change compatibility or disclosed material. Corrections to existing records remain conservative and can stale proposals. Recipient-specific denial overrides general sharing; a model revision returns previously shareable content to private pending renewed authorization.
+
+To start one person fresh, open **Your lore → Clear all** in that person's window. This resets that profile's name, preferences, lore and chats, including connections involving them. Other people's private conversations and lore remain. The same window then asks for a new name. Use this to keep some profiles established while others start fresh.

@@ -9,7 +9,7 @@ let pendingSend = null;
 let discoverProfiles=[],discoverSignature='',selectedPerson=null;
 const assessments=new Map(),adviceBusy=new Set();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
-const name = (id) => participant(id)?.name || id;
+const name = (id) => participant(id)?.name || 'Someone new';
 const topicLabel = (id) => bootstrap.topics.find(t => t.id === id)?.label || id;
 const facetLabel = (id) => bootstrap.facets?.find(f => f.id === id)?.label;
 const profileFieldLabel = (id) => ({age:'Age',location:'Location',gender:'Gender',interestedIn:'Interested in dating',ageRange:'Preferred age range',pronouns:'Pronouns'})[id] || 'Profile detail';
@@ -61,7 +61,7 @@ function renderDiscover() {
   for(const person of discoverProfiles.filter(p=>p.id===selectedPerson)) {
     const card=el('article','person-card');card.dataset.personId=person.id;
     const portrait=el('div','person-portrait');const photo=el('img');photo.src=person.photo||'';photo.alt=person.name;photo.style.objectPosition=person.photoPosition||'center';portrait.append(avatar(person,'profile-art'));card.append(portrait);
-    const body=el('div','person-copy');body.append(el('h3','',`${person.name}${person.age?' · '+person.age:''}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
+    const body=el('div','person-copy');body.append(el('h3','',`${person.name||'Someone new'}${person.age?' · '+person.age:''}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
     const interests=el('div','interest-notes');for(const interest of person.interests||[])interests.append(el('span','',interest));body.append(interests);
     const assessment=assessments.get(person.id),busy=adviceBusy.has(person.id);
     const ask=button(busy?'Astrid is forming an opinion…':assessment?'Ask Astrid again ↗':'Astrid, thoughts? ↗','button ask-astrid',async()=>{
@@ -69,6 +69,7 @@ function renderDiscover() {
       try {const result=await api(`/api/participants/${activeId}/discover/${person.id}/advice`,{method:'POST',body:{}});assessments.set(person.id,result.assessment);await refresh(true);}
       catch(error){showError(error.message);}finally{adviceBusy.delete(person.id);renderDiscover();}
     });ask.disabled=busy;body.append(ask);
+    if(!assessment) body.append(append(el('div','astrid-assessment hold'),append(el('div','assessment-heading'),avatar(null),el('strong','','My take.')),el('p','',data.memories.length ? 'I don’t have a settled view of your fit yet. I need to understand more before I can recommend connecting.' : 'I don’t know much about you yet, so I can’t tell how you two would fit. Tell me a little about yourself first.')));
     if(assessment) {
       const note=el('div',`astrid-assessment ${assessment.status}`);
       note.append(append(el('div','assessment-heading'),avatar(null),el('strong','',({promising:'I see the appeal.',explore:'There’s a plot twist.',hold:'Before you connect…'})[assessment.status]||'My take.')),el('p','',assessment.text));
@@ -180,11 +181,11 @@ function renderPotentials() {
  const target=$('#potential-people');target.replaceChildren();
  const row=el('div','potential-row');
  for(const person of discoverProfiles.filter(p=>!data.chats.some(c=>c.other.id===p.id))) {
-   const control=append(button('','potential-person',()=>{selectedPerson=person.id;discoverSignature='';renderDiscover();$('#person-dialog').hidden=false;if(!assessments.has(person.id))$('#discover-panel .ask-astrid')?.click();}),avatar(person),append(el('span'),el('strong','',person.name),el('small','',({promising:'Promising',explore:'Worth exploring',hold:'Needs a closer look',unknown:'Still getting to know you'})[person.matchStatus]||'Not assessed')));row.append(control);
+   const control=append(button('','potential-person',()=>{selectedPerson=person.id;discoverSignature='';renderDiscover();$('#person-dialog').hidden=false;$('#discover-panel .ask-astrid')?.click();}),avatar(person),append(el('span'),el('strong','',person.name||'Someone new'),el('small','',({promising:'Promising',explore:'Worth exploring',hold:'Needs a closer look',unknown:'Still getting to know you'})[person.matchStatus]||'Not assessed')));row.append(control);
  }
  if(!row.children.length)row.append(el('p','fineprint','The next plot twist is still out there.'));target.append(row);
 }
-function render() { if(!data) return; $('#your-corner').textContent=`${data.participant.name.split(' ')[0]}’s clubhouse`;renderNav();renderHeading();renderChat();renderKnowledge();renderPotentials();if(!$('#person-dialog').hidden)renderDiscover(); }
+function render() { if(!data) return; $('#your-corner').textContent=data.participant.name?`${data.participant.name.split(' ')[0]}’s clubhouse`:'Your clubhouse';$('#club-portrait').replaceChildren(avatar(data.participant,'club-avatar'));renderNav();renderHeading();renderChat();renderKnowledge();renderPotentials();if(!$('#person-dialog').hidden)renderDiscover(); }
 function field(label,type,value,options) {
   const wrap = el('label','field',label); const input = el(type === 'textarea' ? 'textarea' : type === 'select' ? 'select' : 'input');
   if(type === 'select') for(const [id,name] of options) { const option = el('option','',name); option.value = id; input.append(option); }
@@ -222,10 +223,10 @@ function permissionDialog(memory) {
 function profileDialog() {
   const age=field('Your age','number',data.participant.age);age.input.min=18;age.input.max=120;age.input.required=true;
   const location=field('Where you live','text',data.participant.location);location.input.required=true;
-  const p=data.participant; const gender=field('Your gender, in your words','text',p.gender); const pronouns=field('Pronouns','text',p.pronouns); const attracted=field('Genders you’re interested in dating (comma-separated)','text',p.interestedIn?.join(', ')); const minimum=field('Minimum age (18+)','number',p.ageRange?.[0]||18); minimum.input.min=18; const maximum=field('Maximum age','number',p.ageRange?.[1]||99); maximum.input.min=18; const bio=field('A little about you · shareable','textarea',p.bio); const enabled=field('Open to introductions','checkbox',p.matchingEnabled); const listed=field('Let people who could be a match see my profile','checkbox',p.discoverable);
-  dialog('Your kind of connection.','No assumptions. Tell Astrid who you’re interested in meeting.',[age,location,gender,pronouns,attracted,minimum,maximum,bio,enabled,listed],'Save profile',async()=>{
+  const p=data.participant; const displayName=field('Your name','text',p.name);displayName.input.required=true; const gender=field('Your gender, in your words','text',p.gender); const pronouns=field('Pronouns','text',p.pronouns); const attracted=field('Genders you’re interested in dating (comma-separated)','text',p.interestedIn?.join(', ')); const minimum=field('Minimum age (18+)','number',p.ageRange?.[0]||18); minimum.input.min=18; const maximum=field('Maximum age','number',p.ageRange?.[1]||99); maximum.input.min=18; const bio=field('A little about you · shareable','textarea',p.bio); const enabled=field('Open to introductions','checkbox',p.matchingEnabled); const listed=field('Let people who could be a match see my profile','checkbox',p.discoverable);
+  dialog('Your kind of connection.','No assumptions. Tell Astrid who you’re interested in meeting.',[displayName,age,location,gender,pronouns,attracted,minimum,maximum,bio,enabled,listed],'Save profile',async()=>{
     const ageRange=[Number(minimum.input.value),Number(maximum.input.value)]; if(ageRange[0]<18||ageRange[1]<ageRange[0]) { showError('Please enter an adult age range with the maximum at least the minimum.'); throw new Error('Invalid age range'); }
-    const values={age:Number(age.input.value),location:location.input.value.trim(),gender:gender.input.value.trim(),pronouns:pronouns.input.value.trim(),interestedIn:attracted.input.value.split(',').map(s=>s.trim()).filter(Boolean),ageRange,bio:bio.input.value.trim(),matchingEnabled:enabled.input.checked,discoverable:listed.input.checked};
+    const values={name:displayName.input.value.trim(),age:Number(age.input.value),location:location.input.value.trim(),gender:gender.input.value.trim(),pronouns:pronouns.input.value.trim(),interestedIn:attracted.input.value.split(',').map(s=>s.trim()).filter(Boolean),ageRange,bio:bio.input.value.trim(),matchingEnabled:enabled.input.checked,discoverable:listed.input.checked};
     const changes=Object.fromEntries(Object.entries(values).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(p[key])));
     if(Object.keys(changes).length) await mutate(`/api/participants/${activeId}/profile`,'PATCH',changes,'Profile updated.');
   });
@@ -237,14 +238,31 @@ function declineDialog(proposal) {
 async function refresh(force = false) {
   if(refreshing && !force) return; refreshing=true; const actor=activeId;
   try { if(view === 'presenter') { const result=await api('/api/presenter'); if(view === 'presenter') renderPresenter(result); }
-    else { const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`),api(`/api/participants/${actor}/discover`)]); if(actor===activeId && view==='people') { if(data && data.participant.revision!==result.participant.revision)assessments.clear();data=result;if(discovery)discoverProfiles=discovery.profiles||[];render(); } }
+    else { const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`),api(`/api/participants/${actor}/discover`)]); if(actor===activeId && view==='people') { if(data && data.resetId!==result.resetId)clearLocalState();if(data && data.participant.revision!==result.participant.revision)assessments.clear();data=result;if(discovery)discoverProfiles=discovery.profiles||[];render();if(!data.participant.name&&!$('#editor').open)nameDialog(); } }
   } catch(error) { if(force) showError(error.message,()=>refresh(true)); } finally { refreshing=false; }
 }
-async function startMatching() { const b=$('#review-matches'); b.disabled=true; try { await mutate(`/api/participants/${activeId}/matching`,'POST',{},'Astrid is taking a look. You can keep chatting.'); } catch {} finally { b.disabled=false; } }
+let matchingRefresh=false;
+async function startMatching() {
+  if(matchingRefresh)return;matchingRefresh=true;
+  const controls=[$('#review-matches'),$('#notebook-matching')];controls.forEach(b=>{b.disabled=true;b.classList.add('refreshing');b.setAttribute('aria-busy','true');});
+  try {
+    assessments.clear();discoverSignature='';await refresh(true);
+    const {job}=await api(`/api/participants/${activeId}/matching`,{method:'POST',body:{}});
+    let status=job;
+    while(['queued','running'].includes(status.status)) {await new Promise(r=>setTimeout(r,500));status=(await api(`/api/participants/${activeId}/matching/${job.id}`)).job;}
+    assessments.clear();discoverSignature='';await refresh(true);
+    if(status.status==='failed')throw new Error(status.error||'Could not update the matches. Please try again.');
+    if(!$('#person-dialog').hidden)$('#discover-panel .ask-astrid')?.click();
+  } catch(error){showError(error.message);}finally{matchingRefresh=false;controls.forEach(b=>{b.disabled=false;b.classList.remove('refreshing');b.removeAttribute('aria-busy');});}
+}
+function clearLocalState(){$('#editor').close();drafts.clear();assessments.clear();adviceBusy.clear();pendingSend=null;conversation='astrid';selectedPerson=null;$('#message-input').value='';$('#person-dialog').hidden=true;$('#error').hidden=true;resetSignatures();discoverSignature='';presenterSignature='';}
+function nameDialog(){const fieldName=field('Your name','text','');fieldName.input.required=true;dialog('A new chapter.','What should Astrid call you?',[fieldName],'Meet Astrid',async()=>{await api(`/api/participants/${activeId}/profile`,{method:'PATCH',body:{name:fieldName.input.value.trim()}});await refresh(true);});}
+$('#clear-all').addEventListener('click',()=>dialog('Start completely fresh?','This clears this profile’s name, lore and conversations, plus connections and matches involving this person. Other people’s private chats and lore stay. Your illustration stays.',[],'Clear this profile',async()=>{await api(`/api/participants/${activeId}/clear`,{method:'POST',body:{}});clearLocalState();$('#editor').close();await refresh(true);setTimeout(()=>{if(!data.participant.name)nameDialog();},0);}));
+
 function renderPresenter(result) {
   const signature=JSON.stringify([result,activeId]); if(signature===presenterSignature) return; presenterSignature=signature;
   const root=$('#presenter'); root.replaceChildren(el('span','eyebrow','PRESENTER VIEW · FICTIONAL DEMO DATA'),el('h1','','The thinking behind the spark.'),el('p','','A separate view of matching decisions, open questions, and background work. Participants only see their own conversations and approved introductions.'));
-  const controls=el('div','presenter-controls'); controls.append(button(`Review matches for ${name(activeId).split(' ')[0]} ↗`,'button',startMatching),button('Reset fictional demo','button subtle',()=>dialog('Start the demo fresh?','This resets the application’s fictional people, chats, and matches. Prompt-lab sessions are kept.',[],'Reset demo',async()=>{ await mutate('/api/demo/reset','POST',{},'Demo reset.'); resetSignatures(); presenterSignature=''; await refresh(true); })));
+  const controls=el('div','presenter-controls'); controls.append(button(`Review matches for ${name(activeId).split(' ')[0]} ↗`,'button',startMatching),button('Clear this profile','button subtle',()=>dialog('Clear this profile?','Other people’s private conversations and lore will stay.',[],'Clear this profile',async()=>{await api(`/api/participants/${activeId}/clear`,{method:'POST',body:{}});clearLocalState();await refresh(true);})));
   root.append(controls);
   const stats=el('div','stats'); for(const [label,value] of Object.entries(result.counts || {})) { if(typeof value==='number') stats.append(append(el('div','stat'),el('strong','',value),el('span','',label))); } root.append(stats);
   const grid=el('div','presenter-grid'), reviews=el('section'), jobs=el('section'); reviews.append(el('h2','','Matching decisions')); jobs.append(el('h2','','Background work'));

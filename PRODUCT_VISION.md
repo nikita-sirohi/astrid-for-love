@@ -105,13 +105,13 @@ Private conversations are not automatically material Astrid may quote or disclos
 
 Her private judgment remains tentative: she needs evidence of mutual compatibility and should resolve important unknowns through follow-ups. An appealing introduction must not depend on inventing agreement or ignoring a known dealbreaker.
 
-## Agent loop
+## Conversation and matching cycle
 
 Listen → develop a tentative understanding → identify a consequential uncertainty → ask or take an authorized matching action → observe the response → revise.
 
 Astrid needs discretion over the next useful step: another question, a corrected understanding, considering a candidate, proposing an introduction, or waiting. Persistent memory and resuming across conversations support the experience. Web search may support secondary tasks; the participant database supplies potential matches.
 
-Harness selection and implementation design are deferred until the product vision is agreed. The local agent-loop project is a possible source of reusable pieces.
+The application uses a small, self-contained runtime for conversation, understanding, and matching.
 
 ## First-pass scope
 

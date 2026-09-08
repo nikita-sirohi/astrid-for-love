@@ -37,6 +37,7 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
           if(method==='GET'&&!rest)result=await app.view(id);
           else if(method==='GET'&&rest==='discover')result=await app.discover(id);
           else if(method==='POST'&&/^discover\/[^/]+\/(advice|interest|discuss)$/.test(rest||'')){const [,other,action]=rest.split('/');const input=await body(req);result=action==='advice'?await app.browseAdvice(id,other):action==='discuss'?await app.discussAdvice(id,other,input.reviewId):await app.browseInterest(id,other,input.reviewId);}
+          else if(method==='POST'&&rest==='clear')result=await app.clearProfile(id);
           else if(method==='POST'&&rest==='messages')result=await app.converse(id,(await body(req)).text);
           else if(method==='PATCH'&&rest==='profile')result=await app.profile(id,await body(req));
           else if(method==='POST'&&rest==='lore/refresh')result=await app.summarizeLore(id);
@@ -44,6 +45,7 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
           else if(method==='GET'&&/^memories\/[^/]+\/history$/.test(rest||''))result=await app.memoryHistory(id,rest.split('/')[1]);
           else if(method==='POST'&&rest==='memories')result=await app.editMemory(id,null,await body(req));
           else if(rest?.startsWith('memories/')&&['PATCH','DELETE'].includes(method))result=await app.editMemory(id,rest.slice(9),method==='PATCH'?await body(req):{},method==='DELETE');
+          else if(method==='GET'&&/^matching\/[^/]+$/.test(rest||''))result=await app.matchingStatus(id,rest.split('/')[1]);
           else if(method==='POST'&&rest==='matching')result=await app.runMatching(id);
           else if(method==='POST'&&rest==='permissions')result=await app.requestPermission(id,await body(req));
           else if(method==='POST'&&rest?.startsWith('permissions/'))result=await app.decidePermission(id,rest.slice(12),(await body(req)).decision);

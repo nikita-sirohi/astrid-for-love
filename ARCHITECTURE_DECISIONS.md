@@ -8,7 +8,7 @@ Product behavior is defined in [PRODUCT_VISION.md](PRODUCT_VISION.md). This docu
 
 ## AD-001 — Standalone public repository
 
-Accepted. Build a self-contained open-source project. The neighboring agent-loop project is a reference, not a runtime or local-path dependency. Inspect individual building blocks and copy or adapt only what this application needs, after checking licensing and attribution requirements. No source has been copied yet.
+Accepted. Build a self-contained open-source project with no dependency on another local checkout.
 
 Public fixtures must use fictional participants and redistributable assets. Keep real conversations, local runtime data, and credentials out of version control. Repository license selection is still open.
 
@@ -36,7 +36,7 @@ Accepted direction. Meaningful changes to participant understanding or preferenc
 
 Flow: save understanding → queue review → check eligibility and baseline → assess candidates → propose, request clarification, or withhold → let Astrid gather missing information → review again when useful information changes.
 
-Implemented with persisted jobs, coalescing of queued reviews, a single in-process worker, pair duplicate suppression, and revision checks before proposal publication. Changes and manual requests trigger work; no periodic scheduler exists. Failed work is visible, and later explicit requests can review again. Clarification creation alone does not trigger an agent-to-agent loop.
+Implemented with persisted jobs, coalescing of queued reviews, a single in-process worker, pair duplicate suppression, and revision checks before proposal publication. Changes and manual requests trigger work; no periodic scheduler exists. Failed work is visible, and later explicit requests can review again. Clarification creation alone does not trigger an cycle between agents.
 
 ## AD-005 — Application code owns consent and access
 
@@ -166,3 +166,9 @@ Matchy can compare incomplete profiles after both people have explicit adult/mut
 Memy stores concise key learnings with a separate short summary (maximum 110 characters) for the lore UI. Clarifications of the same expectation should revise its unlocked record instead of accumulating recaps. Full text, evidence, uncertainty and independent boundaries remain available for correction and matching. Existing records can receive display-only compression through POST /api/participants/:id/lore/refresh; results are scoped to the owner and skipped if source records changed during generation. This does not alter belief revisions, sharing permissions or readiness. User text edits clear stale summaries. Stories sort after preferences in the compact panel.
 
 The composer clears immediately and renders the pending message. Failed requests check whether the server already saved the message before restoring a draft, preserving newer text and drafts in other conversations.
+
+## AD-019: Refresh feedback and individual fresh starts
+
+Manual matching refresh polls the owner-scoped persisted job until completion, then reloads candidates and the open assessment. Every profile opens with an explicit provisional explanation even before model advice arrives. The UI uses an accessible refresh icon with progress feedback.
+
+POST /api/participants/:id/clear clears only that participant's identity fields, private history and lore, plus shared chats, consent and matching records involving that person. Other participants' private conversations, profiles and lore are preserved. Portraits and port identities remain; a new name can be entered immediately. Active work prevents reset until it finishes. A per-profile reset marker clears browser drafts and cached assessments in that person's windows. This demo control remains subject to the existing actor scope; authentication is still deferred.

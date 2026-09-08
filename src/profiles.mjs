@@ -3,7 +3,7 @@ export function profileValue(field,value) {
  if(field==='age') {if(!Number.isInteger(value)||value<0||value>120)throw Error('Age must be a whole number from 0 to 120.');return value;}
  if(field==='ageRange') {if(!Array.isArray(value)||value.length!==2||!value.every(Number.isInteger)||value[0]<18||value[1]<value[0]||value[1]>120)throw Error('Invalid adult age range.');return value;}
  if(field==='interestedIn') {if(!Array.isArray(value)||value.length>20||value.some(v=>typeof v!=='string'||!v.trim()||v.length>80))throw Error('Invalid gender preferences.');return [...new Set(value.map(v=>v.trim()))];}
- if(!['gender','pronouns','location','bio'].includes(field)||typeof value!=='string'||!value.trim()||value.length>(field==='bio'?500:120))throw Error('Invalid profile value.');return value.trim();
+ if(!['gender','pronouns','location','bio','name'].includes(field)||typeof value!=='string'||!value.trim()||value.length>(field==='bio'?500:120))throw Error('Invalid profile value.');return value.trim();
 }
 export function applyProfileSuggestions(p,suggestions,latestMessageId) {
  let changed=false;p.profileConflicts??=[];p.profileEvidence??={};p.profileFieldLocks??={};

@@ -104,3 +104,33 @@ test('lore compression changes only display summaries and skips concurrent edits
   assert.equal((await app.summarizeLore('maya')).updated,0);
   assert.equal((await app.listMemories('maya')).memories[0].summary,null);
 });
+
+test('clearing one profile preserves other people’s private conversations and understanding', async t => {
+  const { app, repository }=await setup(t);
+  await repository.transact(s=>{
+    for(const id of ['maya','eli','theo']) {
+      s.messages.push({id:'msg-'+id,chatId:'astrid-'+id,authorId:id,text:'private '+id});
+      s.memories.push({id:'note-'+id,participantId:id,text:'lore '+id});
+    }
+    s.chats.push({id:'shared-theo',participantIds:['theo','eli']});
+    s.messages.push({id:'shared-message',chatId:'shared-theo',text:'shared'});
+    s.proposals.push({id:'proposal-theo',participantIds:['theo','eli']});
+    s.reviews.push({id:'review-theo',participantIds:['theo','eli']});
+    s.permissions.push({id:'permission-theo',participantId:'eli',recipientId:'theo',memoryId:'note-eli'});
+    s.browseAdvice=[{participantId:'eli',otherId:'theo',reviewId:'review-theo'}];
+  });
+  const before=await repository.read();await app.clearProfile('theo');const after=await repository.read();
+  for(const id of ['maya','eli']) {
+    assert.deepEqual(after.participants.find(p=>p.id===id),before.participants.find(p=>p.id===id));
+    assert.deepEqual(after.messages.filter(m=>m.chatId==='astrid-'+id),before.messages.filter(m=>m.chatId==='astrid-'+id));
+    assert.deepEqual(after.memories.filter(m=>m.participantId===id),before.memories.filter(m=>m.participantId===id));
+  }
+  const fresh=after.participants.find(p=>p.id==='theo');assert.equal(fresh.name,'');assert.equal(fresh.age,null);assert.ok(fresh.resetId);assert.ok(fresh.photo);
+  assert.ok(!after.messages.some(m=>['astrid-theo','shared-theo'].includes(m.chatId)));
+  assert.ok(!after.memories.some(m=>m.participantId==='theo'));
+  assert.ok(!after.permissions.some(p=>p.recipientId==='theo'));
+  assert.ok(!after.reviews.some(r=>r.participantIds.includes('theo')));
+  assert.equal(after.browseAdvice.length,0);
+  app.busy.add('theo');await assert.rejects(app.clearProfile('theo'),/Wait/);app.busy.delete('theo');
+  await app.profile('theo',{name:'Robin'});assert.equal((await app.view('theo')).participant.name,'Robin');
+});
