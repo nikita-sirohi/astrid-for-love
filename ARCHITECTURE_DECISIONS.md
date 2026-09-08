@@ -60,10 +60,10 @@ A separate presenter view exposes concise decision evidence, pending jobs, and l
 
 Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Selected versions are drafts:
 
-- [Astrid v0.6.0](prompts/astrid/v0.6.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
-- [Matchy v0.4.0](prompts/matchy/v0.4.0.md)
+- [Astrid v0.8.0](prompts/astrid/v0.8.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
+- [Matchy v0.6.0](prompts/matchy/v0.6.0.md)
 
-See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.1.0](prompts/runtime/v0.1.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.4.0](prompts/runtime/v0.4.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 
@@ -131,6 +131,12 @@ Temporary audit reports and evaluation findings are local artifacts, not reposit
 
 ## AD-014: Personal windows and a warm conversation interface
 
-Each participant has a fixed local port; one application process and file-store writer serve all windows. Default ports are Maya4310, Eli4311, Theo4312; a separate operator listener on4313 exposes review/reset tools. Requests on a personal port cannot impersonate a different participant or access operator endpoints. This remains a local demo access model, not production authentication. Browser drafts are independent by origin.
+Each participant has a fixed local port; one application process and file-store writer serve all windows. Default ports are Maya4310, Eli4311, Theo4312, Elena4313; a separate operator listener on4314 exposes review/reset tools. Requests on a personal port cannot impersonate a different participant or access operator endpoints. This remains a local demo access model, not production authentication. Browser drafts are independent by origin.
 
 The participant experience has no identity switcher, model/storage badges, demo banners, or operator navigation. Use a clean, cozy storybook chat design with parchment, moss, and sky tones. Astrid has a younger Mediterranean-looking illustrated portrait, clearly distinct from the photographic participants; avoid pink-heart decoration. Memory and profile controls remain accessible without displaying readiness as a score or interview checklist. Technical details belong in operator tools and developer documentation.
+
+## Profile browsing and advisory exploration
+
+Browsing is the landing view. Only opted-in, discoverable, mutually eligible profiles enter the browse pool. Matchy reviews current understanding on demand, returning a decision plus explicit exploration allow/hold. Complete baseline understanding remains mandatory; a firm conflict or prior decline cannot be overridden by interest. Astrid receives a separate participant-safe advice context: own understanding, public counterpart profile, specifically permitted counterpart stories, and own discussion facets. Private pair rationale never enters this context.
+
+Advice and interest bind to reviewed participant revisions. Interest records one acceptance; the existing proposal lifecycle requires the other acceptance before creating a chat. File-store transactions persist advice, reviews, clarifications, and consent. The interface uses an absurd illustrated clubhouse and keeps internal agent names and operator status out of participant copy.

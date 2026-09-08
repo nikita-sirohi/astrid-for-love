@@ -20,9 +20,10 @@ const schemas = {
     profileUpdates: array(object({ field: enumeration(profileFields), value: string, correction: { type: 'boolean' }, evidenceIds: array(string) }), 6),
     clarificationUpdates: array(object({ id: string, status: enumeration(['answered', 'deferred', 'declined', 'obsolete']), evidenceIds: array(string) })),
     gaps: array(object({ topic, reason: { type: 'string', minLength: 1, maxLength: 600 } }), 2) }),
-  review: object({ decision: enumeration(['propose', 'needs_clarification', 'withhold']), reason: string,
+  review: object({ decision: enumeration(['propose', 'needs_clarification', 'withhold']), reason: string, exploration: enumeration(['allow', 'hold']),
     evidenceIds: array(string, 100), clarifications: array(object({ participantId: string, topic, facet, evidenceIds: array(string) })) }),
   introduce: object({ text: string }),
+  advise: object({ text: string }),
   checkin: object({ reply: string }),
 };
 
@@ -51,9 +52,9 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.2.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.3.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.4.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.3.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.4.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -95,6 +96,19 @@ function contextFor(task, args) {
     return { facets, participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted).map(cleanMemory),
       previousReviews: (args.previousReviews || []).map(review => pick(review, ['decision', 'reason', 'evidenceIds', 'clarifications', 'revisions'])) };
   }
+  if (task === 'advise') {
+    const memories = ownMemories(args.memories || [], args.participant.id);
+    if (!['promising', 'explore', 'hold'].includes(args.assessment?.status) || typeof args.assessment?.canRequest !== 'boolean') throw new Error('Invalid advice assessment.');
+    const safeTopics = (args.assessment.topics || []).flatMap(item => {
+      const def = facets.find(facet => facet.id === item.facet);
+      if (!def) return [];
+      const evidenceIds = (item.evidenceIds || []).filter(id => memories.some(memory => memory.id === id && memory.facet === def.id));
+      return evidenceIds.length ? [{ ...def, evidenceIds }] : [];
+    });
+    return { participant: ownProfile(args.participant), memories, other: publicProfile(args.other),
+      shareableMemories: (args.shareableMemories || []).filter(memory => !memory.deleted && memory.participantId === args.other.id).map(cleanMemory),
+      assessment: { status: args.assessment.status, topics: safeTopics, canRequest: args.assessment.status !== 'hold' && args.assessment.canRequest } };
+  }
   if (task === 'introduce') return { recipient: publicProfile(args.recipient), other: publicProfile(args.other),
     // These records have already been permission-filtered for this recipient by the domain.
     shareableMemories: (args.shareableMemories || []).filter(memory => !memory.deleted && memory.participantId === args.other.id).map(cleanMemory) };
@@ -117,6 +131,8 @@ function contextFor(task, args) {
 function validateReferences(task, data, context) {
   const fail = () => { throw new Error('Invalid agent evidence or authority.'); };
   if (task === 'review') {
+    if (data.decision === 'withhold' && data.exploration !== 'hold') fail();
+    if (data.exploration === 'allow' && context.participants.some(person => facets.some(facet => !context.memories.some(memory => memory.participantId === person.id && memory.facet === facet.id && memory.status === 'confirmed') || context.memories.some(memory => memory.participantId === person.id && memory.facet === facet.id && memory.status === 'tentative')))) fail();
     if (data.evidenceIds.some(id => !context.memories.some(memory => memory.id === id))) fail();
     if (data.clarifications.some(item => !context.participants.some(person => person.id === item.participantId)
       || !facets.some(def => def.id === item.facet && def.topic === item.topic)
@@ -171,6 +187,12 @@ const questions = {
 };
 
 function scripted(task, context) {
+  if (task === 'advise') {
+    const name = context.other.name;
+    if (context.assessment.status === 'hold') return { text: `I would hold off on requesting an introduction to ${name} for now. There is more to understand before I would encourage this connection.` };
+    if (context.assessment.status === 'explore') return { text: `${name} looks worth getting curious about. I would use an early conversation to compare what a good week together looks like—there is room to discover whether your rhythms fit.` };
+    return { text: `I think ${name} looks promising for you. ${context.other.interests?.[0] ? `Ask about ${context.other.interests[0]}; that is a better opening than trying to deliver the perfect line.` : 'Start with a story and see whether the conversation has a little pull.'}` };
+  }
   if (task === 'introduce') {
     const interest = context.other.interests?.[0];
     return { text: `Meet ${context.other.name}. ${interest ? `Ask about ${interest}—there is your opening for a conversation.` : 'There is a new conversation here if you are curious.'} Take a look and decide whether you feel a spark.` };
@@ -179,15 +201,18 @@ function scripted(task, context) {
   if (task === 'review') {
     const evidenceIds = context.memories.map(memory => memory.id);
     const missing = context.participants.flatMap(person => facets.filter(facet => !context.memories.some(memory => memory.participantId === person.id && memory.facet === facet.id && memory.status === 'confirmed')).map(facet => ({ participantId: person.id, topic: facet.topic, facet: facet.id, evidenceIds: [] })));
-    if (missing.length) return { decision: 'needs_clarification', reason: 'Scripted demo: basic understanding is incomplete; discuss the first uncovered topic for each person.', evidenceIds, clarifications: missing.slice(0, 2) };
+    if (missing.length) return { decision: 'needs_clarification', exploration: 'hold', reason: 'Scripted demo: basic understanding is incomplete; discuss the first uncovered topic for each person.', evidenceIds, clarifications: missing.slice(0, 2) };
     const family = context.memories.filter(memory => memory.topic === 'family' && memory.strength === 'requires');
     const parentRequired = family.find(memory => /(?:mother|father|parent).*(?:must|need|live)|must.*(?:mother|father|parent)/i.test(memory.text) && !/never live/i.test(memory.text));
     const parentRefused = family.find(memory => memory.participantId !== parentRequired?.participantId && /never live|(?:will not|won.t|cannot) live/i.test(memory.text) && /parent|mother|father/i.test(memory.text));
-    if (parentRequired && parentRefused) return { decision: 'withhold', reason: 'Scripted demo: one person requires sharing a home with a parent; the other has a firm boundary against it.', evidenceIds: [parentRequired.id, parentRefused.id], clarifications: [] };
+    if (parentRequired && parentRefused) return { decision: 'withhold', exploration: 'hold', reason: 'Scripted demo: one person requires sharing a home with a parent; the other has a firm boundary against it.', evidenceIds: [parentRequired.id, parentRefused.id], clarifications: [] };
     const noChildren = family.find(memory => /(?:no|not want|never want|do not want|don.t want) (?:any )?(?:kids|children)|child.?free/i.test(memory.text));
     const wantsChildren = family.find(memory => memory.participantId !== noChildren?.participantId && /(?:want|have|having|raise) (?:my own |our own )?(?:kids|children)/i.test(memory.text) && !/(?:no|not|never|don.t|child.?free)/i.test(memory.text));
-    if (noChildren && wantsChildren) return { decision: 'withhold', reason: 'Scripted demo: the stated firm requirements about children conflict.', evidenceIds: [noChildren.id, wantsChildren.id], clarifications: [] };
-    return { decision: 'propose', reason: 'Scripted demo branch: both profiles have baseline coverage and no scripted children conflict. This is not a model compatibility assessment.', evidenceIds, clarifications: [] };
+    if (noChildren && wantsChildren) return { decision: 'withhold', exploration: 'hold', reason: 'Scripted demo: the stated firm requirements about children conflict.', evidenceIds: [noChildren.id, wantsChildren.id], clarifications: [] };
+    const planned = context.memories.find(memory => memory.facet === 'closeness.time' && memory.strength === 'prefers' && /planned dates|dates planned|plans? .*advance|scheduled dates/i.test(memory.text));
+    const spontaneous = context.memories.find(memory => memory.participantId !== planned?.participantId && memory.facet === 'closeness.time' && memory.strength === 'prefers' && /spontan/i.test(memory.text));
+    if (spontaneous && planned) return { decision: 'needs_clarification', exploration: 'allow', reason: 'Scripted demo: preferred dating rhythms differ without a firm exclusion; explore how they would make plans together.', evidenceIds: [spontaneous.id, planned.id], clarifications: [spontaneous, planned].map(memory => ({ participantId: memory.participantId, topic: memory.topic, facet: memory.facet, evidenceIds: [memory.id] })) };
+    return { decision: 'propose', exploration: 'allow', reason: 'Scripted demo branch: both profiles have baseline coverage and no scripted children conflict. This is not a model compatibility assessment.', evidenceIds, clarifications: [] };
   }
   const latest = context.messages.filter(message => message.role === 'user').at(-1);
   const text = latest?.text || '';

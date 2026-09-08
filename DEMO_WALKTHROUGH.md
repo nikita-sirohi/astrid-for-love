@@ -2,7 +2,7 @@
 
 Start with `npm start` for live Astra or `npm run demo:offline` for scripted responses, then open Maya at http://127.0.0.1:4310, Eli at http://127.0.0.1:4311, and Theo at http://127.0.0.1:4312 in separate windows. The command you launch determines live versus scripted mode; the personal interface has no technical badges. Both use fictional participants and real local application state. Live wording and decisions can vary; offline wording is prepared and should be presented as such.
 
-Open http://127.0.0.1:4313/?view=presenter and use the reset control before a clean demonstration. Reset waits until active conversations and matching work have finished. It resets application data, not prompt-lab sessions.
+Open http://127.0.0.1:4314/?view=presenter and use the reset control before a clean demonstration. Reset waits until active conversations and matching work have finished. It resets application data, not prompt-lab sessions.
 
 ## 1. Get to know Maya
 
@@ -20,7 +20,7 @@ Inspect **Understanding**: the family memory should now express the expectation,
 
 ## 2. Show the decision behind the introduction
 
-A meaningful committed change queues matching work. **Find a connection** also requests a review. Open the operator window on port4313 to watch the job and candidate decisions.
+A meaningful committed change queues matching work. **Find a connection** also requests a review. Open the operator window on port4314 to watch the job and candidate decisions.
 
 The prepared records are designed to make Maya and Eli promising: Eli can accept family living arrangements with separate space and professional care. Theo has a conflicting firm expectation. The live smoke produced a Maya/Eli proposal and withheld Maya/Theo; a new live run can instead request clarification. Inspect the rationale rather than forcing a success label.
 
@@ -56,3 +56,7 @@ Approval applies to this detail, its version, and this recipient. It does not ma
 ## What to say about the build
 
 This is a local, single-process demo with a scoped file-backed memory API and separate Memy, Astrid, and Matchy roles. Jobs are event-triggered or manually requested; there is no periodic scheduler. Separate participant ports and the operator screen are local access controls, not authentication. The browser waits for completed replies; the independent prompt lab supports streaming. Keep improving prompts through live conversations and the regression suites alongside this application walkthrough.
+
+## Browse-first clubhouse
+
+Start at Eli’s window on port4311. Open Elena’s card with **Astrid, thoughts?**. The offline branch calls their planning/spontaneity difference worth exploring; live Matchy may judge their stated flexibility sufficient for a promising match. Express interest, then open Elena’s window on port4313 and accept separately. Both windows now share a connection; Astrid opens it and leaves. Ask about Maya to demonstrate withholding while important understanding remains incomplete. The notebook controls profile visibility as well as memory and matching consent.

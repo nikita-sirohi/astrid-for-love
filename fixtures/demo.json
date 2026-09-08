@@ -24,7 +24,8 @@
         28,
         40
       ],
-      "photoPosition": "0% center"
+      "photoPosition": "0% center",
+      "discoverable": true
     },
     {
       "id": "eli",
@@ -49,7 +50,8 @@
         27,
         40
       ],
-      "photoPosition": "50% center"
+      "photoPosition": "50% center",
+      "discoverable": true
     },
     {
       "id": "theo",
@@ -74,7 +76,34 @@
         27,
         38
       ],
-      "photoPosition": "100% center"
+      "photoPosition": "100% center",
+      "discoverable": true
+    },
+    {
+      "id": "elena",
+      "name": "Elena",
+      "age": 30,
+      "gender": "woman",
+      "pronouns": "she/her",
+      "interestedIn": [
+        "man"
+      ],
+      "location": "San Francisco",
+      "bio": "Film restorer, terrible fortune-teller, excellent midnight noodles.",
+      "photo": "/assets/portraits/elena.png",
+      "photoPosition": "center",
+      "interests": [
+        "Lost films found again",
+        "Midnight noodles",
+        "Wildly inaccurate tarot"
+      ],
+      "matchingEnabled": true,
+      "discoverable": true,
+      "revision": 1,
+      "ageRange": [
+        28,
+        40
+      ]
     }
   ],
   "memories": [
@@ -413,7 +442,7 @@
       "participantId": "eli",
       "topic": "closeness",
       "facet": "closeness.time",
-      "text": "I want affection and regular time together, with room for independent interests.",
+      "text": "I prefer dates planned a few days ahead so I can protect time together; I can occasionally be spontaneous.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -797,6 +826,246 @@
       ],
       "revision": 1,
       "deleted": false
+    },
+    {
+      "id": "elena-dating",
+      "participantId": "elena",
+      "topic": "dating",
+      "facet": "dating.intent",
+      "text": "I want a long-term relationship with someone who enjoys a little unpredictability.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-dating-structure",
+      "participantId": "elena",
+      "topic": "dating",
+      "facet": "dating.structure",
+      "text": "I want monogamy once we decide we are together; until then I would talk openly about whether we are seeing other people.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-dating-availability",
+      "participantId": "elena",
+      "topic": "dating",
+      "facet": "dating.availability",
+      "text": "Film deadlines can run late, but I have time for a couple of dates a week and want to make room for someone.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-family-children",
+      "participantId": "elena",
+      "topic": "family",
+      "facet": "family.children",
+      "text": "I do not have children and would like children eventually. I would expect us both to share the practical work of parenting.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-ambition",
+      "participantId": "elena",
+      "topic": "ambition",
+      "facet": "ambition.work",
+      "text": "Restoring films matters to me. When a deadline interrupts our plans I would explain it, make another plan, and offer my partner that same flexibility.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-ambition-money",
+      "participantId": "elena",
+      "topic": "ambition",
+      "facet": "ambition.money",
+      "text": "I prefer separate personal accounts and proportional contributions to shared costs, with joint decisions about large shared purchases.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-closeness",
+      "participantId": "elena",
+      "topic": "closeness",
+      "facet": "closeness.time",
+      "text": "I prefer frequent spontaneous dates, though I can plan ahead. I like affection and also need some evenings alone.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-closeness-privacy",
+      "participantId": "elena",
+      "topic": "closeness",
+      "facet": "closeness.privacy",
+      "text": "I keep my phone and messages private, and would give a partner the same privacy. Honest questions are fine; searching each other’s messages is not.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-relationships",
+      "participantId": "elena",
+      "topic": "relationships",
+      "facet": "relationships.exes",
+      "text": "I am not close with an ex now. A partner can be friends with an ex if they are honest about it and willing to introduce us.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-relationships-friends",
+      "participantId": "elena",
+      "topic": "relationships",
+      "facet": "relationships.friends",
+      "text": "My friends and our late film nights matter. I would make room for my partner’s friendships too and move a night around for something important.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-repair",
+      "participantId": "elena",
+      "topic": "repair",
+      "facet": "repair.disagreement",
+      "text": "If an argument gets heated, I say I need a short break and agree when we will come back. Then I try to describe the actual problem without insulting anyone.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-repair-accountability",
+      "participantId": "elena",
+      "topic": "repair",
+      "facet": "repair.accountability",
+      "text": "When I hurt someone, I ask what they need me to understand, own my part, and follow through on a concrete change. I expect that effort both ways.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-convictions",
+      "participantId": "elena",
+      "topic": "convictions",
+      "facet": "convictions.beliefs",
+      "text": "I am secular. Tarot is a game for me, not something I expect a partner to believe in.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-convictions-flexibility",
+      "participantId": "elena",
+      "topic": "convictions",
+      "facet": "convictions.flexibility",
+      "text": "Different beliefs can be interesting if neither of us tries to convert the other. I would not accept contempt for my friends or their identities.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "elena-family",
+      "participantId": "elena",
+      "topic": "family",
+      "text": "I could accept a partner’s parent living with us if we agree on separate space and professional care.",
+      "status": "confirmed",
+      "strength": "accepts",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false,
+      "facet": "family.household"
+    },
+    {
+      "id": "elena-family-care",
+      "participantId": "elena",
+      "topic": "family",
+      "facet": "family.care",
+      "text": "I can help occasionally with a family errand, but I would not take on regular hands-on caregiving. I would organize professional care for my own parents if needed.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-elena-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
     }
   ],
   "messages": [
@@ -831,7 +1100,7 @@
       "chatId": "astrid-eli",
       "authorId": "eli",
       "role": "user",
-      "text": "Prepared fictional conversation summary: I want a long-term relationship. I want a monogamous relationship; we would agree before becoming exclusive. I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone. I do not have children and want children eventually. I would share parenting responsibilities. Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return. Separate accounts and proportional shared costs work for me; we each keep control of our personal spending. I want affection and regular time together, with room for independent interests. Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone. I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear. Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off. I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out. If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner. I am secular and do not need a partner to share a religion or attend religious services with me. I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs. I would not become the default caregiver for a partner’s parent. I can support my partner emotionally while they arrange professional care.",
+      "text": "Prepared fictional conversation summary: I want a long-term relationship. I want a monogamous relationship; we would agree before becoming exclusive. I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone. I do not have children and want children eventually. I would share parenting responsibilities. Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return. Separate accounts and proportional shared costs work for me; we each keep control of our personal spending. I prefer dates planned a few days ahead so I can protect time together; I can occasionally be spontaneous. Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone. I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear. Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off. I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out. If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner. I am secular and do not need a partner to share a religion or attend religious services with me. I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs. I would not become the default caregiver for a partner’s parent. I can support my partner emotionally while they arrange professional care.",
       "createdAt": "2026-09-08T16:00:00.000Z",
       "fixture": true
     },
@@ -876,6 +1145,23 @@
       "authorId": "astrid",
       "role": "assistant",
       "text": "Good to see you, Theo. What has been taking up your time lately?",
+      "createdAt": "2026-09-08T16:02:00.000Z"
+    },
+    {
+      "id": "fixture-elena-baseline",
+      "chatId": "astrid-elena",
+      "authorId": "elena",
+      "role": "user",
+      "text": "Prepared fictional conversation summary: I want a long-term relationship with someone who enjoys a little unpredictability. I want monogamy once we decide we are together; until then I would talk openly about whether we are seeing other people. Film deadlines can run late, but I have time for a couple of dates a week and want to make room for someone. I do not have children and would like children eventually. I would expect us both to share the practical work of parenting. I could accept a partner’s parent living with us if we agree on separate space and professional care. I can help occasionally with a family errand, but I would not take on regular hands-on caregiving. I would organize professional care for my own parents if needed. Restoring films matters to me. When a deadline interrupts our plans I would explain it, make another plan, and offer my partner that same flexibility. I prefer separate personal accounts and proportional contributions to shared costs, with joint decisions about large shared purchases. I prefer frequent spontaneous dates, though I can plan ahead. I like affection and also need some evenings alone. I keep my phone and messages private, and would give a partner the same privacy. Honest questions are fine; searching each other’s messages is not. I am not close with an ex now. A partner can be friends with an ex if they are honest about it and willing to introduce us. My friends and our late film nights matter. I would make room for my partner’s friendships too and move a night around for something important. If an argument gets heated, I say I need a short break and agree when we will come back. Then I try to describe the actual problem without insulting anyone. When I hurt someone, I ask what they need me to understand, own my part, and follow through on a concrete change. I expect that effort both ways. I am secular. Tarot is a game for me, not something I expect a partner to believe in. Different beliefs can be interesting if neither of us tries to convert the other. I would not accept contempt for my friends or their identities.",
+      "createdAt": "2026-09-08T16:00:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "welcome-elena",
+      "chatId": "astrid-elena",
+      "authorId": "astrid",
+      "role": "assistant",
+      "text": "Elena! Tell me about something that surprised you this week.",
       "createdAt": "2026-09-08T16:02:00.000Z"
     }
   ],

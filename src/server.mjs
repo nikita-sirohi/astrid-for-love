@@ -29,12 +29,14 @@ export function createServer(app,{participantId=null,allowPresenter=true}={}) {
         const scoped=id=>{if(!actor||actor!==id)throw new AppError('This conversation is private.',403);};
         const needsActor=()=>{if(typeof actor!=='string'||!actor)throw new AppError('Open your personal conversation window.',403);};
         let match,result;
-        if(method==='GET'&&path==='/api/bootstrap') result={...await app.bootstrap(),activeParticipantId:participantId,operator:allowPresenter};
+        if(method==='GET'&&path==='/api/bootstrap') result={...await app.bootstrap(participantId),activeParticipantId:participantId,operator:allowPresenter};
         else if(method==='GET'&&path==='/api/presenter'){if(!allowPresenter)throw new AppError('Not found.',404);result=await app.presenter();}
         else if(method==='POST'&&path==='/api/demo/reset'){if(!allowPresenter)throw new AppError('Not found.',404);result=await app.reset();}
         else if((match=path.match(/^\/api\/participants\/([^/]+)(?:\/(.*))?$/))) {
           const [,id,rest]=match;scoped(id);
           if(method==='GET'&&!rest)result=await app.view(id);
+          else if(method==='GET'&&rest==='discover')result=await app.discover(id);
+          else if(method==='POST'&&/^discover\/[^/]+\/(advice|interest)$/.test(rest||'')){const [,other,action]=rest.split('/');const input=await body(req);result=action==='advice'?await app.browseAdvice(id,other):await app.browseInterest(id,other,input.reviewId);}
           else if(method==='POST'&&rest==='messages')result=await app.converse(id,(await body(req)).text);
           else if(method==='PATCH'&&rest==='profile')result=await app.profile(id,await body(req));
           else if(method==='GET'&&rest==='memories')result=await app.listMemories(id);

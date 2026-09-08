@@ -62,3 +62,9 @@ Live mode uses gpt-6-astra and selected versioned role bodies WITHOUT the prompt
 ## Acceptance essentials
 
 One acceptance never opens chat; two explicit current acceptances do exactly once. Multiple distinct proposals supported, pair duplicates suppressed, decline respected. Profile/memory changes invalidate pending reviews/proposals, matching disabled prevents introductions. User corrections/deletions override prior history (context cutoff or equivalent). Restart preserves state/jobs. Actor scoping covers every private mutation. No keys or real sessions become fixtures or tracked files. Demo covers meaningful follow-up, coverage gap, private rationale, spark, double consent, handoff/departure, own check-in, editable memory, withhold, correction, and one-sided pending branches.
+
+## Browsing
+
+Profile `discoverable` is an explicit editable boolean. `GET /api/participants/:id/discover` returns mutually eligible public profiles opted into browsing. `POST /api/participants/:id/discover/:otherId/advice` returns public `other` and `assessment` containing status (`promising`, `explore`, `hold`), text, canRequest, reviewId, revisions, and optional proposalId. `POST /api/participants/:id/discover/:otherId/interest` accepts `{reviewId}` and returns the participant-projected proposal. All routes enforce the port’s participant identity.
+
+Reviews carry `exploration: allow|hold`. Explore requires full baseline coverage, evidence from both people, and no firm conflict. Advice uses a separate agent `advise` task with authorized context only. Reviews, advice, and clarification records persist in the file repository. Interest rejects stale revisions, withheld decisions, hidden profiles, and prior declines; it records only the requesting person’s acceptance and uses the existing double-consent transition.

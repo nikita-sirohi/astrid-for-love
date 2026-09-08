@@ -12,7 +12,7 @@ For live Astra conversations, create a local `.env` using `.env.example`, or set
 npm start
 ```
 
-Open each person in their own browser window: [Maya](http://127.0.0.1:4310), [Eli](http://127.0.0.1:4311), and [Theo](http://127.0.0.1:4312). Each port stays with that person; all windows share matching and connection state. Operator controls live separately at [port 4313](http://127.0.0.1:4313/?view=presenter). Follow the [walkthrough](DEMO_WALKTHROUGH.md) for the lifecycle and alternative branches.
+Open each person in their own browser window: [Maya](http://127.0.0.1:4310), [Eli](http://127.0.0.1:4311), [Theo](http://127.0.0.1:4312), and [Elena](http://127.0.0.1:4313). Each port stays with that person; all windows share matching and connection state. Operator controls live separately at [port 4314](http://127.0.0.1:4314/?view=presenter). Follow the [walkthrough](DEMO_WALKTHROUGH.md) for the lifecycle and alternative branches.
 
 For a repeatable walkthrough without a key or network:
 
@@ -22,7 +22,9 @@ npm run demo:offline
 
 The offline command uses scripted agent responses; the personal interface stays visually identical to live mode. It exercises real application state and consent rules; it is not evidence of model performance. Stop one server before starting another. Both modes use the same default app store; reset the fictional demo when changing modes for a clean run.
 
-One process binds to `127.0.0.1` on ports 4310–4313 (or consecutively from `PORT`). Participant ports enforce a fixed identity and exclude operator endpoints; these local windows are not production authentication. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
+One process binds to `127.0.0.1` on ports 4310–4314 (or consecutively from `PORT`). Participant ports enforce a fixed identity and exclude operator endpoints; these local windows are not production authentication. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
+
+Start in Eli’s window: browse Elena, select **Astrid, thoughts?**, then express interest. Elena must separately accept before a shared chat opens. Live assessments can vary; the offline pool demonstrates an ordinary planning-versus-spontaneity uncertainty. Maya demonstrates a hold while baseline understanding is incomplete. Browse smoke state is isolated under `.local/browse-smoke/`.
 
 ## What is implemented
 
@@ -33,7 +35,7 @@ One process binds to `127.0.0.1` on ports 4310–4313 (or consecutively from `PO
 - An opening, nudge, and visible Astrid departure. Subsequent shared messages are not sent to an agent. A participant can request a private check-in.
 - Participant-specific sharing permission requests, memory revision checks, and application enforcement of consent and chat membership.
 
-This is a single-process file-backed demo. The interface uses a warm paper and woodland palette with a generated illustrated Astrid portrait. Technical status and operator controls stay outside personal conversations. The browser displays completed replies with a typing state; token streaming is available in the separate CLI lab. There is no authentication, periodic matching scheduler, production notification system, or full post-date learning workflow. Simple coverage and eligibility checks are demo approximations, not proof of compatibility.
+This is a single-process file-backed demo. The interface is an eccentric illustrated singles clubhouse, with a fallen Cupid, fictional partygoers, and Astrid as its opinionated host. Technical status and operator controls stay outside personal conversations. The browser displays completed replies with a typing state; token streaming is available in the separate CLI lab. There is no authentication, periodic matching scheduler, production notification system, or full post-date learning workflow. Simple coverage and eligibility checks are demo approximations, not proof of compatibility.
 
 ## Keep testing the prompts
 
@@ -44,7 +46,7 @@ npm run chat -- --session first-conversation
 npm run chat -- --role matchy --session review-one --file fixtures/matchy-review.txt
 ```
 
-Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.8.0 with conversation examples v0.3.0, and Matchy v0.5.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
+Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.8.0 with conversation examples v0.3.0, and Matchy v0.6.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
 
 ## Validate
 
@@ -52,6 +54,8 @@ Type `/exit` to quit; repeat the command to resume. A session pins its role, pro
 npm test
 node src/demo-smoke.mjs
 node src/demo-smoke.mjs --live
+node src/browse-smoke.mjs
+node src/browse-smoke.mjs --live
 npm run eval
 npm run eval -- --suite live-regressions
 ```

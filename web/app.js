@@ -2,9 +2,11 @@ const $ = (selector) => document.querySelector(selector);
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; };
 const append = (node, ...children) => { node.append(...children.filter(Boolean)); return node; };
 const button = (label, className, action) => { const node = el('button', className, label); node.type = 'button'; node.addEventListener('click', action); return node; };
-let bootstrap, activeId, data, view = 'people', conversation = 'astrid', panel = 'memory', sending = false, refreshing = false;
+let bootstrap, activeId, data, view = 'people', conversation = 'discover', panel = 'memory', sending = false, refreshing = false;
 let chatSignature = '', knowledgeSignature = '', presenterSignature = '', toastTimer;
 const drafts = new Map();
+let discoverProfiles=[],discoverSignature='';
+const assessments=new Map(),adviceBusy=new Set();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
 const name = (id) => participant(id)?.name || id;
 const topicLabel = (id) => bootstrap.topics.find(t => t.id === id)?.label || id;
@@ -32,19 +34,59 @@ async function mutate(path, method, body, success) {
 function draftKey() { return `${activeId}/${conversation}`; }
 function saveDraft() { if(activeId) drafts.set(draftKey(), $('#message-input').value); }
 function resetSignatures() { chatSignature = ''; knowledgeSignature = ''; }
-function selectConversation(id) { saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); }
+function selectConversation(id) { saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); if(id==='discover')refresh(true); }
 function renderNav() {
   const nav = $('#conversation-nav');
   const item = (id, person, title, subtitle) => append(button('',`conversation-button ${conversation === id ? 'active' : ''}`,() => selectConversation(id)),avatar(person),append(el('span'),el('strong','',title),el('small','',subtitle)));
-  nav.replaceChildren(item('astrid',null,'Astrid','Your matchmaking friend'), el('p','section-label','People you’ve met'));
+  const meet=append(button('',`conversation-button ${conversation==='discover'?'active':''}`,()=>selectConversation('discover')),el('span','browse-icon','✷'),append(el('span'),el('strong','','Meet people'),el('small','','The plot thickens')));
+  nav.replaceChildren(meet,item('astrid',null,'With Astrid','Ask the matchmaker'), el('p','section-label','Your connections'));
   for(const chat of data.chats) nav.append(item(chat.id,chat.other,chat.other.name.split(' ')[0],'Just the two of you'));
-  if(!data.chats.length) nav.append(el('p','nav-empty','A space for someone you haven’t met yet.'));
+  if(!data.chats.length) nav.append(el('p','nav-empty','A cast of two. Coming soon.'));
   const pending = data.proposals.filter(p => p.status === 'pending').length;
   if(pending) nav.append(item('proposals',{id:'astrid'},'A little spark',`${pending} introduction${pending === 1 ? '' : 's'} to consider`));
 }
+function renderDiscover() {
+  const signature=JSON.stringify([discoverProfiles,[...assessments],[...adviceBusy],data.proposals,data.participant.revision]);
+  if(signature===discoverSignature)return;discoverSignature=signature;
+  const target=$('#discover-panel');target.replaceChildren();
+  const hero=el('header','clubhouse-hero');
+  const art=el('img','clubhouse-art');art.src='/assets/clubhouse/cupid-retired.png';art.alt='A retired Cupid and a strange little cast of matchmaking characters.';
+  const intro=el('div','clubhouse-intro');intro.append(el('span','clubhouse-kicker','WELCOME TO THE ANTI-SWIPE CLUB'),el('h1','','Cupid’s dead.\nYou’re not.'),el('p','','Interesting people. Questionable timing. A matchmaker with opinions.'));
+  hero.append(art,intro,el('span','hero-stamp','LOVE IS\nA WEIRD\nTHING.'));target.append(hero);
+  const heading=el('div','discover-heading');heading.append(append(el('div'),el('span','eyebrow','THE PEOPLE DEPARTMENT'),el('h2','','Someone worth the trouble.')),el('p','','See a face you like? Ask Astrid for the plot.'));target.append(heading);
+  const grid=el('div','discover-grid');
+  for(const person of discoverProfiles) {
+    const card=el('article','person-card');card.dataset.personId=person.id;
+    const portrait=el('div','person-portrait');const photo=el('img');photo.src=person.photo||'';photo.alt=person.name;photo.style.objectPosition=person.photoPosition||'center';portrait.append(photo,el('span','person-sticker','ACTUAL\nCHARACTER'));card.append(portrait);
+    const body=el('div','person-copy');body.append(el('h3','',`${person.name}, ${person.age}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
+    const interests=el('div','interest-notes');for(const interest of person.interests||[])interests.append(el('span','',interest));body.append(interests);
+    const assessment=assessments.get(person.id),busy=adviceBusy.has(person.id);
+    const ask=button(busy?'Astrid is forming an opinion…':assessment?'Ask Astrid again ↗':'Astrid, thoughts? ↗','button ask-astrid',async()=>{
+      adviceBusy.add(person.id);renderDiscover();
+      try {const result=await api(`/api/participants/${activeId}/discover/${person.id}/advice`,{method:'POST',body:{}});assessments.set(person.id,result.assessment);}
+      catch(error){showError(error.message);}finally{adviceBusy.delete(person.id);renderDiscover();}
+    });ask.disabled=busy;body.append(ask);
+    if(assessment) {
+      const note=el('div',`astrid-assessment ${assessment.status}`);
+      note.append(append(el('div','assessment-heading'),avatar(null),el('strong','',({promising:'I see the appeal.',explore:'There’s a plot twist.',hold:'I’d hold this one.'})[assessment.status]||'My take.')),el('p','',assessment.text));
+      const proposal=data.proposals.find(p=>p.id===assessment.proposalId || p.participantIds.includes(person.id)&&['pending','introduced'].includes(p.status));
+      if(proposal)note.append(button(proposal.status==='introduced'?'Open your conversation ↗':'See your introduction ↗','button',()=>selectConversation(proposal.status==='introduced'?proposal.chatId:'proposals')));
+      else if(assessment.canRequest)note.append(button('I’m interested ↗','button',async event=>{
+        const control=event.currentTarget;control.disabled=true;
+        try {await api(`/api/participants/${activeId}/discover/${person.id}/interest`,{method:'POST',body:{reviewId:assessment.reviewId}});await refresh(true);selectConversation('proposals');}
+        catch(error){showError(error.message);control.disabled=false;}
+      }));
+      else note.append(button('Talk it through with Astrid','text-button',()=>{selectConversation('astrid');$('#message-input').focus();}));
+      body.append(note);
+    }
+    card.append(body);grid.append(card);
+  }
+  if(!discoverProfiles.length)grid.append(append(el('div','discover-empty'),el('h3','','The room’s a little quiet.'),el('p','','Astrid is keeping an eye out. In the meantime, give her a good story.'),button('Talk to Astrid ↗','button',()=>selectConversation('astrid'))));
+  target.append(grid,el('p','discover-footnote','A profile is an opening line. Astrid knows there’s more to the story.'));
+}
 function renderHeading() {
   const h = $('#chat-heading'); const chat = data.chats.find(c => c.id === conversation);
-  h.replaceChildren(avatar(chat?.other), append(el('div'),el('h1','',chat ? chat.other.name : conversation === 'proposals' ? 'A little spark' : 'Astrid'),el('p','',chat ? 'Introduced by Astrid. The rest is yours.' : 'Your AI matchmaking friend')));
+  h.replaceChildren(avatar(chat?.other), append(el('div'),el('h1','',chat ? chat.other.name : conversation === 'proposals' ? 'A little spark' : 'Astrid'),el('p','',chat ? 'Introduced by Astrid. The rest is yours.' : 'Matchmaker. Meddler. AI.')));
   if(chat) h.append(button('Check in privately ↗','button light small inline-checkin', async () => {
     const actor = activeId; const b = h.querySelector('button'); b.disabled = true;
     try { await api(`/api/participants/${actor}/checkin`,{method:'POST',body:{chatId:chat.id}},actor); if(actor === activeId) { selectConversation('astrid'); await refresh(true); } toast('Your private check-in is ready.'); }
@@ -80,7 +122,7 @@ function proposalNode(proposal) {
   if(proposal.status === 'pending') {
     if(mine === 'accepted') { body.append(el('p','proposal-status','You’re interested. Waiting for their yes before Astrid introduces you.')); actions.append(button('Withdraw my yes','button subtle small',()=>decision('withdrawn'))); }
     else actions.append(button('I’d like to meet them ↗','button',()=>decision('accepted')),button('No spark','button subtle',()=>declineDialog(proposal)));
-    body.append(actions,el('p','fineprint','No pressure, no explanation needed. You’ll only share a chat if you both say yes.'));
+    body.append(actions,el('p','fineprint','A conversation opens when you both say yes.'));
   } else if(proposal.status === 'introduced') { body.append(el('p','proposal-status','Two yeses. You’ve been introduced.'),button('Open your conversation ↗','button',()=>selectConversation(proposal.chatId))); }
   else body.append(el('p','proposal-status',({declined:'This introduction isn’t going ahead.',withdrawn:'This proposal was withdrawn.',stale:'Your understanding changed. Astrid will take another look.'})[proposal.status] || proposal.status));
   card.append(body); return card;
@@ -146,9 +188,9 @@ function renderKnowledge() {
 function renderProfile(target) {
   const p = data.participant; const card = el('div','profile-details'); if(p.photo) { const img = el('img'); img.src = p.photo; img.alt = p.name; img.style.objectPosition = p.photoPosition || 'center'; card.append(img); }
   card.append(el('h3','',`${p.name}, ${p.age}`),el('p','',[p.location,p.pronouns].filter(Boolean).join(' · ')),el('p','',p.bio));
-  const dl = el('dl'); for(const [label,value] of [['Gender',p.gender || 'Not yet shared'],['Interested in dating',p.interestedIn?.join(', ') || 'Not yet shared'],['Age range',p.ageRange?.join('–') || 'Not yet shared'],['Matching',p.matchingEnabled ? 'Open to introductions' : 'Paused']]) dl.append(el('dt','',label),el('dd','',value)); card.append(dl,button('Edit your profile','button subtle',profileDialog)); target.append(card);
+  const dl = el('dl'); for(const [label,value] of [['Gender',p.gender || 'Not yet shared'],['Interested in dating',p.interestedIn?.join(', ') || 'Not yet shared'],['Age range',p.ageRange?.join('–') || 'Not yet shared'],['Introductions',p.matchingEnabled ? 'Open' : 'Paused'],['Profile visibility',p.discoverable ? 'Visible to people who could be a match' : 'Not listed']]) dl.append(el('dt','',label),el('dd','',value)); card.append(dl,button('Edit your profile','button subtle',profileDialog)); target.append(card);
 }
-function render() { if(!data) return; $('#your-corner').textContent=`A little space for ${data.participant.name.split(' ')[0]}.`; renderNav(); renderHeading(); renderChat(); renderKnowledge(); }
+function render() { if(!data) return; $('#your-corner').textContent=`${data.participant.name.split(' ')[0]}’s clubhouse`; renderNav(); $('#discover-panel').hidden=conversation!=='discover';$('#chat-panel').hidden=conversation==='discover';if(conversation==='discover')renderDiscover();else{renderHeading();renderChat();}renderKnowledge(); }
 function field(label,type,value,options) {
   const wrap = el('label','field',label); const input = el(type === 'textarea' ? 'textarea' : type === 'select' ? 'select' : 'input');
   if(type === 'select') for(const [id,name] of options) { const option = el('option','',name); option.value = id; input.append(option); }
@@ -179,10 +221,10 @@ function permissionDialog(memory) {
 function profileDialog() {
   const age=field('Your age','number',data.participant.age);age.input.min=18;age.input.max=120;age.input.required=true;
   const location=field('Where you live','text',data.participant.location);location.input.required=true;
-  const p=data.participant; const gender=field('Your gender, in your words','text',p.gender); const pronouns=field('Pronouns','text',p.pronouns); const attracted=field('Genders you’re interested in dating (comma-separated)','text',p.interestedIn?.join(', ')); const minimum=field('Minimum age (18+)','number',p.ageRange?.[0]||18); minimum.input.min=18; const maximum=field('Maximum age','number',p.ageRange?.[1]||99); maximum.input.min=18; const bio=field('A little about you · shareable','textarea',p.bio); const enabled=field('Open to introductions','checkbox',p.matchingEnabled);
-  dialog('Your kind of connection.','No assumptions. Tell Astrid who you’re interested in meeting.',[age,location,gender,pronouns,attracted,minimum,maximum,bio,enabled],'Save profile',async()=>{
+  const p=data.participant; const gender=field('Your gender, in your words','text',p.gender); const pronouns=field('Pronouns','text',p.pronouns); const attracted=field('Genders you’re interested in dating (comma-separated)','text',p.interestedIn?.join(', ')); const minimum=field('Minimum age (18+)','number',p.ageRange?.[0]||18); minimum.input.min=18; const maximum=field('Maximum age','number',p.ageRange?.[1]||99); maximum.input.min=18; const bio=field('A little about you · shareable','textarea',p.bio); const enabled=field('Open to introductions','checkbox',p.matchingEnabled); const listed=field('Let people who could be a match see my profile','checkbox',p.discoverable);
+  dialog('Your kind of connection.','No assumptions. Tell Astrid who you’re interested in meeting.',[age,location,gender,pronouns,attracted,minimum,maximum,bio,enabled,listed],'Save profile',async()=>{
     const ageRange=[Number(minimum.input.value),Number(maximum.input.value)]; if(ageRange[0]<18||ageRange[1]<ageRange[0]) { showError('Please enter an adult age range with the maximum at least the minimum.'); throw new Error('Invalid age range'); }
-    const values={age:Number(age.input.value),location:location.input.value.trim(),gender:gender.input.value.trim(),pronouns:pronouns.input.value.trim(),interestedIn:attracted.input.value.split(',').map(s=>s.trim()).filter(Boolean),ageRange,bio:bio.input.value.trim(),matchingEnabled:enabled.input.checked};
+    const values={age:Number(age.input.value),location:location.input.value.trim(),gender:gender.input.value.trim(),pronouns:pronouns.input.value.trim(),interestedIn:attracted.input.value.split(',').map(s=>s.trim()).filter(Boolean),ageRange,bio:bio.input.value.trim(),matchingEnabled:enabled.input.checked,discoverable:listed.input.checked};
     const changes=Object.fromEntries(Object.entries(values).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(p[key])));
     if(Object.keys(changes).length) await mutate(`/api/participants/${activeId}/profile`,'PATCH',changes,'Profile updated.');
   });
@@ -194,7 +236,7 @@ function declineDialog(proposal) {
 async function refresh(force = false) {
   if(refreshing && !force) return; refreshing=true; const actor=activeId;
   try { if(view === 'presenter') { const result=await api('/api/presenter'); if(view === 'presenter') renderPresenter(result); }
-    else { const result=await api(`/api/participants/${actor}`); if(actor===activeId && view==='people') { data=result; render(); } }
+    else { const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`),conversation==='discover'?api(`/api/participants/${actor}/discover`):Promise.resolve(null)]); if(actor===activeId && view==='people') { if(data && data.participant.revision!==result.participant.revision)assessments.clear();data=result;if(discovery)discoverProfiles=discovery.profiles||[];render(); } }
   } catch(error) { if(force) showError(error.message,()=>refresh(true)); } finally { refreshing=false; }
 }
 async function startMatching() { const b=$('#review-matches'); b.disabled=true; try { await mutate(`/api/participants/${activeId}/matching`,'POST',{},'Astrid is taking a look. You can keep chatting.'); } catch {} finally { b.disabled=false; } }
