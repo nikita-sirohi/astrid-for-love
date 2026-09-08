@@ -3,10 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=22" },
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "chat": "node src/cli.mjs",
     "test": "node --test",
-    "smoke": "node src/smoke.mjs"
+    "smoke": "node src/smoke.mjs",
+    "eval": "node src/evaluate.mjs",
+    "eval:unseen": "node src/evaluate.mjs --astrid-version 0.2.0 --matchy-version 0.2.0",
+    "start": "node src/server.mjs",
+    "dev": "node src/server.mjs",
+    "demo:offline": "ASTRID_MODE=offline node src/server.mjs"
   }
 }

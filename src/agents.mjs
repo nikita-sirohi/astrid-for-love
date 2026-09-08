@@ -1,0 +1,192 @@
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { configuration, promptFor, selectedVersions } from './runtime.mjs';
+
+const topics = ['dating', 'family', 'ambition', 'closeness', 'relationships', 'repair', 'convictions'];
+const hash = value => createHash('sha256').update(value).digest('hex');
+const pick = (value, keys) => Object.fromEntries(keys.filter(key => value[key] !== undefined).map(key => [key, value[key]]));
+const string = { type: 'string', minLength: 1, maxLength: 4000 };
+const enumeration = values => ({ type: 'string', enum: values });
+const array = (items, maxItems = 20) => ({ type: 'array', items, maxItems });
+const object = properties => ({ type: 'object', properties, required: Object.keys(properties), additionalProperties: false });
+const topic = enumeration(topics);
+const schemas = {
+  converse: object({ reply: string,
+    memories: array(object({ id: { type: ['string', 'null'] }, topic, text: string,
+      status: enumeration(['confirmed', 'tentative']), strength: enumeration(['requires', 'prefers', 'accepts', 'unknown']), evidenceIds: array(string) })),
+    permissions: array(object({ memoryId: string, recipientId: string })),
+    clarificationUpdates: array(object({ id: string, status: enumeration(['answered', 'deferred', 'declined', 'obsolete']) })) }),
+  review: object({ decision: enumeration(['propose', 'needs_clarification', 'withhold']), reason: string,
+    evidenceIds: array(string, 100), clarifications: array(object({ participantId: string, topic })) }),
+  introduce: object({ text: string }),
+  checkin: object({ reply: string }),
+};
+
+// Validate locally too: refusals, malformed adapters and invalid IDs never become mutations.
+function validate(value, schema) {
+  if (Array.isArray(schema.type)) return schema.type.includes(value === null ? 'null' : typeof value);
+  if (schema.type === 'object') return value && typeof value === 'object' && !Array.isArray(value)
+    && Object.keys(value).every(key => Object.hasOwn(schema.properties, key))
+    && schema.required.every(key => Object.hasOwn(value, key) && validate(value[key], schema.properties[key]));
+  if (schema.type === 'array') return Array.isArray(value) && value.length <= schema.maxItems && value.every(item => validate(item, schema.items));
+  return typeof value === 'string' && (!schema.enum || schema.enum.includes(value))
+    && (!schema.minLength || value.trim().length >= schema.minLength) && (!schema.maxLength || value.length <= schema.maxLength);
+}
+
+export async function applicationPrompt(role, version = selectedVersions[role]) {
+  const lab = await promptFor(role, version);
+  const boundary = '\n\nRuntime mode: local prompt laboratory.';
+  const index = lab.instructions.lastIndexOf(boundary);
+  if (index < 0) throw new Error('Application prompt assembly failed.');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.1.0.md', import.meta.url), 'utf8');
+  const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.1.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+}
+
+export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
+  try {
+    const response = await fetchImpl('https://api.openai.com/v1/responses', {
+      method: 'POST', headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(timeoutMs),
+      body: JSON.stringify({ model, instructions, input, store: false, stream: false,
+        reasoning: { effort: 'low' }, max_output_tokens: 6000,
+        text: { format: { type: 'json_schema', name: `astrid_${task}`, strict: true, schema } } }),
+    });
+    if (!response.ok) throw new Error(`API HTTP ${response.status}`);
+    const body = await response.json();
+    if (body.status !== 'completed') throw new Error('Agent response incomplete.');
+    if (!Array.isArray(body.output) || body.output.some(item => !['message', 'reasoning'].includes(item.type))) throw new Error('Invalid agent response.');
+    const content = body.output.filter(item => item.type === 'message').flatMap(item => item.content || []);
+    if (content.some(item => item.type !== 'output_text')) throw new Error('Invalid agent response.');
+    const data = JSON.parse(content.map(item => item.text).join(''));
+    return { data, id: body.id, model: body.model, usage: body.usage };
+  } catch (error) {
+    const message = /^(API HTTP \d{3}|Agent response incomplete\.|Invalid agent response\.)$/.test(error.message) ? error.message : 'Agent request failed or timed out.';
+    throw new Error(message);
+  }
+}
+
+const publicProfile = value => pick(value, ['id', 'name', 'age', 'gender', 'pronouns', 'location', 'bio', 'photo', 'interests']);
+const ownProfile = value => ({ ...publicProfile(value), ...pick(value, ['interestedIn', 'matchingEnabled', 'revision', 'ageRange']) });
+const cleanMemory = value => pick(value, ['id', 'participantId', 'topic', 'text', 'status', 'strength', 'sharing', 'evidenceIds', 'revision', 'userLocked', 'locked']);
+const ownMemories = (memories, id) => memories.filter(memory => memory.participantId === id && !memory.deleted).map(cleanMemory);
+const ownMessages = (messages, id) => messages.filter(message => message.chatId === `astrid-${id}`
+  && (message.authorId === id || message.authorId === 'astrid' || message.authorId === 'system'))
+  .map(message => pick(message, ['id', 'role', 'authorId', 'text']));
+
+function contextFor(task, args) {
+  if (task === 'review') {
+    if (args.participants.length !== 2) throw new Error('Matching requires exactly two participants.');
+    const ids = args.participants.map(person => person.id);
+    return { participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted).map(cleanMemory),
+      previousReviews: (args.previousReviews || []).map(review => pick(review, ['decision', 'reason', 'evidenceIds', 'clarifications', 'revisions'])) };
+  }
+  if (task === 'introduce') return { recipient: publicProfile(args.recipient), other: publicProfile(args.other),
+    // These records have already been permission-filtered for this recipient by the domain.
+    shareableMemories: (args.shareableMemories || []).filter(memory => !memory.deleted && memory.participantId === args.other.id).map(cleanMemory) };
+  const context = { participant: ownProfile(args.participant), memories: ownMemories(args.memories || [], args.participant.id),
+    messages: ownMessages(args.messages || [], args.participant.id) };
+  if (task === 'checkin') return { ...context, other: publicProfile(args.other) };
+  return { ...context, clarifications: (args.clarifications || []).filter(item => item.participantId === args.participant.id)
+    .map(item => pick(item, ['id', 'participantId', 'topic', 'status'])), permissionRecipients: (args.permissionRecipients || []).map(publicProfile) };
+}
+
+function validateReferences(task, data, context) {
+  const fail = () => { throw new Error('Invalid agent evidence or authority.'); };
+  if (task === 'review') {
+    if (data.evidenceIds.some(id => !context.memories.some(memory => memory.id === id))) fail();
+    if (data.clarifications.some(item => !context.participants.some(person => person.id === item.participantId))) fail();
+    if (data.decision === 'needs_clarification' && !data.clarifications.length) fail();
+    if (data.decision === 'propose' && context.participants.some(person => !context.memories.some(memory => memory.participantId === person.id && data.evidenceIds.includes(memory.id)))) fail();
+  }
+  if (task !== 'converse') return;
+  const userEvidence = new Set(context.messages.filter(message => message.role === 'user' && message.authorId === context.participant.id).map(message => message.id));
+  for (const memory of data.memories) {
+    if (!memory.evidenceIds.length || memory.evidenceIds.some(id => !userEvidence.has(id))) fail();
+    if (memory.id && !context.memories.some(existing => existing.id === memory.id && !existing.userLocked && !existing.locked)) fail();
+    if (memory.id === null) delete memory.id;
+  }
+  for (const permission of data.permissions) {
+    if (!context.memories.some(memory => memory.id === permission.memoryId) || !context.permissionRecipients.some(person => person.id === permission.recipientId)) fail();
+  }
+  for (const update of data.clarificationUpdates) {
+    const clarification = context.clarifications.find(item => item.id === update.id && item.status === 'queued');
+    if (!clarification) fail();
+    if (update.status === 'answered' && !data.memories.some(memory => memory.topic === clarification.topic && memory.status === 'confirmed')) fail();
+    if (update.status === 'obsolete' && !context.memories.some(memory => memory.topic === clarification.topic && memory.status === 'confirmed')) fail();
+  }
+}
+
+const questions = {
+  dating: 'What kind of relationship are you looking for, and which genders are you interested in dating?',
+  family: 'What would a partner need to understand about the role family plays in your life?',
+  ambition: 'What takes priority when work and your personal life compete?',
+  closeness: 'How much space do you like to keep for yourself in a relationship?',
+  relationships: 'Which friendships or other relationships would a new partner need to make room for?',
+  repair: 'When you disagree with someone you care about, what actually happens next?',
+  convictions: 'What belief or expectation would you want a partner to understand before things got serious?',
+};
+
+function scripted(task, context) {
+  if (task === 'introduce') {
+    const interest = context.other.interests?.[0];
+    return { text: `Meet ${context.other.name}. ${interest ? `Ask about ${interest}—there is your opening for a conversation.` : 'There is a new conversation here if you are curious.'} Take a look and decide whether you feel a spark.` };
+  }
+  if (task === 'checkin') return { reply: `How are you feeling about the connection with ${context.other.name}? There is no obligation to make it work; if you are curious, what would you want to share about yourself next?` };
+  if (task === 'review') {
+    const evidenceIds = context.memories.map(memory => memory.id);
+    const missing = context.participants.flatMap(person => topics.filter(topic => !context.memories.some(memory => memory.participantId === person.id && memory.topic === topic && memory.status === 'confirmed')).map(topic => ({ participantId: person.id, topic })));
+    if (missing.length) return { decision: 'needs_clarification', reason: 'Scripted demo: basic understanding is incomplete; discuss the first uncovered topic for each person.', evidenceIds, clarifications: missing.slice(0, 2) };
+    const family = context.memories.filter(memory => memory.topic === 'family' && memory.strength === 'requires');
+    const parentRequired = family.find(memory => /(?:mother|father|parent).*(?:must|need|live)|must.*(?:mother|father|parent)/i.test(memory.text) && !/never live/i.test(memory.text));
+    const parentRefused = family.find(memory => memory.participantId !== parentRequired?.participantId && /never live|(?:will not|won.t|cannot) live/i.test(memory.text) && /parent|mother|father/i.test(memory.text));
+    if (parentRequired && parentRefused) return { decision: 'withhold', reason: 'Scripted demo: one person requires sharing a home with a parent; the other has a firm boundary against it.', evidenceIds: [parentRequired.id, parentRefused.id], clarifications: [] };
+    const noChildren = family.find(memory => /(?:no|not want|never want|do not want|don.t want) (?:any )?(?:kids|children)|child.?free/i.test(memory.text));
+    const wantsChildren = family.find(memory => memory.participantId !== noChildren?.participantId && /(?:want|have|having|raise) (?:my own |our own )?(?:kids|children)/i.test(memory.text) && !/(?:no|not|never|don.t|child.?free)/i.test(memory.text));
+    if (noChildren && wantsChildren) return { decision: 'withhold', reason: 'Scripted demo: the stated firm requirements about children conflict.', evidenceIds: [noChildren.id, wantsChildren.id], clarifications: [] };
+    return { decision: 'propose', reason: 'Scripted demo branch: both profiles have baseline coverage and no scripted children conflict. This is not a model compatibility assessment.', evidenceIds, clarifications: [] };
+  }
+  const latest = context.messages.filter(message => message.role === 'user').at(-1);
+  const text = latest?.text || '';
+  const result = { reply: '', memories: [], permissions: [], clarificationUpdates: [] };
+  const clarification = context.clarifications.find(item => item.status === 'queued');
+  const target = clarification?.topic || topics.find(topic => !context.memories.some(memory => memory.topic === topic && memory.status === 'confirmed')) || 'closeness';
+  if (/(?:mother|father|parent).*(?:live|living|move|moving|stay)|(?:live|living|move|moving|stay).*(?:mother|father|parent)/i.test(text)) {
+    const clear = /separate space/i.test(text) && /professional care/i.test(text) && /(?:not|no|don.t).*partner.*caregiv/i.test(text);
+    const existing = context.memories.find(memory => memory.topic === 'family' && !memory.userLocked && !memory.locked);
+    result.memories.push({ ...(existing ? { id: existing.id } : {}), topic: 'family', text, status: clear ? 'confirmed' : 'tentative', strength: /dealbreaker|must|non.negotiable/i.test(text) ? 'requires' : 'unknown', evidenceIds: [latest.id] });
+    if (clear && clarification?.topic === 'family') result.clarificationUpdates.push({ id: clarification.id, status: 'answered' });
+    result.reply = clear ? 'Separate space and professional care make the expectation much clearer. What would you want to understand about a partner’s own family obligations?' : 'What would your partner be agreeing to: sharing a home, helping with care, or both? And what would you make room for if the roles were reversed?';
+  } else result.reply = questions[target];
+  return result;
+}
+
+export function createAgents({ mode = 'live', client = structuredResponse, config, versions = selectedVersions, timeoutMs = 120000 } = {}) {
+  if (!['live', 'offline'].includes(mode)) throw new Error('Unknown agent mode.');
+  async function run(task, args) {
+    const context = contextFor(task, args);
+    const role = task === 'review' ? 'matchy' : 'astrid';
+    const prompt = await applicationPrompt(role, versions[role]);
+    const started = Date.now();
+    let result;
+    if (mode === 'offline') result = { data: scripted(task, context), model: 'scripted-demo' };
+    else {
+      try {
+        const settings = config || await configuration();
+        result = await client({ ...settings, instructions: prompt.instructions,
+          input: [{ role: 'user', content: JSON.stringify({ task, context }) }], schema: schemas[task], task, timeoutMs });
+      } catch (error) {
+        throw new Error(/^(API HTTP \d{3}|Agent response incomplete\.|Invalid agent response\.)$/.test(error.message) ? error.message : 'Agent request failed or timed out.');
+      }
+    }
+    // Offline suggestions omit optional IDs; the wire format uses nullable required IDs.
+    if (task === 'converse') for (const memory of result.data?.memories || []) memory.id ??= null;
+    if (!validate(result.data, schemas[task])) throw new Error('Invalid agent response.');
+    validateReferences(task, result.data, context);
+    return { ...result.data, metadata: { mode, model: result.model || config?.model || 'gpt-6-astra',
+      prompt: { role, version: versions[role], hash: prompt.hash, assets: prompt.assets }, task,
+      responseId: result.id || null, usage: result.usage || null, durationMs: Date.now() - started,
+      ...(mode === 'offline' ? { label: 'Scripted demo — not model output' } : {}) } };
+  }
+  return Object.fromEntries(Object.keys(schemas).map(task => [task, args => run(task, args)]));
+}

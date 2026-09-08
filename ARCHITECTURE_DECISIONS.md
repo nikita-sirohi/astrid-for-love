@@ -2,7 +2,7 @@
 
 Last updated: 2026-09-08
 
-Status: Product architecture is in design. A minimal local prompt-testing runtime is implemented; product tools, UI, matching jobs, and agent handoffs are not yet implemented.
+Status: A local end-to-end demo and a separate prompt laboratory are implemented. Production deployment and the fuller semantic protocol remain future work. See [implementation contract](IMPLEMENTATION_CONTRACT.md) and [demo walkthrough](DEMO_WALKTHROUGH.md).
 
 Product behavior is defined in [PRODUCT_VISION.md](PRODUCT_VISION.md). This document records technical decisions, their reasons, and unresolved choices. Update it when a decision changes; distinguish accepted direction from proposed implementation detail.
 
@@ -20,7 +20,7 @@ Accepted. Astrid is the conversational agent; Matchy is the background matching 
 - Matchy reviews eligible participants, assesses mutual compatibility, and recommends a proposal, clarification, or withholding a match. Matchy sends clarification needs to Astrid rather than independently messaging participants.
 - Both use persisted application state through scoped APIs. Matchy's private assessment must not automatically enter participant-facing context.
 
-Start with a small shared model/tool execution layer. The language, provider, and exact harness are undecided. Tool names and structured output schemas will be defined with the runtime, not invented in the initial prompts.
+Implemented in Node.js ES modules using the Responses API directly. The application agent adapter returns validated structured results for conversation, review, introduction, and check-in; domain code commits allowed changes. No additional agent framework is required.
 
 ## AD-003 — Replaceable persistence, local files first
 
@@ -28,7 +28,7 @@ Accepted. Place application APIs and repository interfaces between callers and p
 
 Logical records: participants and shareable profiles; conversations, messages, and membership; remembered understanding with evidence, uncertainty, revisions, and sharing permissions; match reviews and proposals; individual acceptance decisions; background jobs and execution metadata.
 
-Implementation requirements to resolve in the storage design: safe writes, concurrent updates, record versioning, and recovery after interrupted operations. Edits to remembered understanding must supersede stale assumptions without rewriting historical chat messages. Removed understanding must not be silently reconstructed from old messages; the exact deletion and context-filtering mechanism remains open.
+Implemented as a serialized JSON repository with temporary-file rename, participant/memory revisions, and a single server process lock. Corrections and deletion markers are authoritative; context cutoffs keep prior conversation from resurrecting edited understanding. Historical messages remain visible. Interrupted running jobs are requeued on initialization. This store is not safe for multiple independent writer processes without its server lock.
 
 ## AD-004 — Event-triggered matching jobs
 
@@ -36,7 +36,7 @@ Accepted direction. Meaningful changes to participant understanding or preferenc
 
 Flow: save understanding → queue review → check eligibility and baseline → assess candidates → propose, request clarification, or withhold → let Astrid gather missing information → review again when useful information changes.
 
-Proposed implementation requirements: coalesce redundant reviews, bound retries and model/tool work, and prevent duplicate proposals on job replay. Record the participant revisions used by each review and recheck them before publishing a proposal so a stale job cannot override a correction. Clarification alone must not generate an endless review loop. Exact queue and worker mechanics remain open.
+Implemented with persisted jobs, coalescing of queued reviews, a single in-process worker, pair duplicate suppression, and revision checks before proposal publication. Changes and manual requests trigger work; no periodic scheduler exists. Failed work is visible, and later explicit requests can review again. Clarification creation alone does not trigger an agent-to-agent loop.
 
 ## AD-005 — Application code owns consent and access
 
@@ -44,7 +44,7 @@ Accepted. Agents recommend actions; application code validates state changes and
 
 Sharing permission is specific to material and audience. Tools and context assembly must enforce it, alongside chat membership and private-memory boundaries. Prompt instructions alone are insufficient enforcement.
 
-Proposal expiration, withdrawal, simultaneous proposals, and the handling of material profile changes during a pending proposal still need product decisions.
+Multiple simultaneous proposals and chats are allowed. Decline and withdrawal are explicit; pending proposals become stale after relevant participant edits. Disabling matching blocks new introductions and leaves existing chats intact. Automatic expiration and deliberately reopening a declined pair remain future work.
 
 ## AD-006 — Three UI experiences
 
@@ -54,22 +54,22 @@ Accepted. Build an attractive, focused demo UI with:
 2. A shared introduction chat: person–Astrid–connection briefly, then person–connection after Astrid's visible departure. Subsequent support happens privately; shared messages do not automatically trigger or enter Astrid's context.
 3. An editable “What Astrid knows about you” panel showing confirmed understanding, tentative interpretations, gaps, and sharing controls. Corrections feed back into matching.
 
-A separate presenter view exposes concise decision evidence, pending jobs, and lifecycle state for fictional demo participants. This is not a participant route to other people's private information. UI framework, identity/session handling, and streaming transport remain open.
+A separate presenter view exposes concise decision evidence, pending jobs, and lifecycle state for fictional demo participants. It is clearly labeled for fictional demonstration. The implementation uses browser HTML/CSS/JavaScript with no build step, participant tabs instead of authentication, and completed-message responses with a typing indicator. The server binds to localhost; the presenter surface is not production access control.
 
 ## AD-007 — Versioned prompts are repository assets
 
 Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Selected versions are drafts:
 
-- [Astrid v0.2.0](prompts/astrid/v0.2.0.md), with [conversation examples v0.1.0](prompts/astrid/examples.v0.1.0.md)
-- [Matchy v0.2.0](prompts/matchy/v0.2.0.md)
+- [Astrid v0.6.0](prompts/astrid/v0.6.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
+- [Matchy v0.4.0](prompts/matchy/v0.4.0.md)
 
-See [prompt versioning rules](prompts/README.md). The future runtime must select explicit versions and record them with executions and match reviews. Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.1.0](prompts/runtime/v0.1.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 
 Accepted direction. Use a resettable fictional dataset and live conversations, matching decisions, and state changes. Demonstrate the full handoff plus corrected memory changing a decision, an incompatible candidate being rejected, and one-sided acceptance remaining pending. Include withholding when no candidate fits.
 
-Validate meaningful behavioral outcomes and application invariants. Do not depend on identical model wording. Record whether a result was live or prepared and which prompt version produced it. No harness, automated evaluations, or runtime tests exist yet.
+Validate meaningful behavioral outcomes and application invariants. Do not depend on identical model wording. Record whether a result was live or prepared and which prompt version produced it. The milestone passed 28 offline tests, a live fictional conversation-to-introduction lifecycle, and desktop/mobile browser walkthroughs. See README.md for reproducible commands. These are scoped checks, not general behavioral guarantees.
 
 ## AD-009 — Persisted agent handoffs and conversational judgment
 
@@ -77,11 +77,11 @@ Accepted direction; semantic contract drafted in [AGENT_PROTOCOL.md](AGENT_PROTO
 
 Keep Matchy's private pair assessment separate from the participant-safe clarification brief. Context assembly must restrict information for each participant and for shared openings. Prompt guidance alone cannot guarantee a generated brief is safe; the implementation must validate content and permissions.
 
-Astrid's prompt teaches next-move selection and an opinionated but revisable point of view, supported by separately versioned authored conversations. Matchy's prompt requires a positive matching case, attention to disconfirming evidence, and prioritized clarification. These drafts have not yet been evaluated with a model.
+Astrid's prompt teaches next-move selection and an opinionated but revisable point of view, supported by separately versioned authored conversations. Matchy's prompt requires a positive matching case, attention to disconfirming evidence, and prioritized clarification. The selected drafts have scoped regression results under evals/ and continue to need live conversation testing. The application implements a narrower handoff vocabulary documented in IMPLEMENTATION_CONTRACT.md.
 
 ## AD-010 — Minimal executable prompt lab
 
-Implemented. Use Node.js 22+ ES modules and the Responses HTTP/SSE API directly for this first testing milestone. There are no third-party runtime dependencies. Default model: gpt-6-astra; low reasoning effort, 4096 maximum output tokens, and a 120-second per-request timeout. UI framework and broader product stack remain undecided.
+Implemented. Use Node.js 22+ ES modules and the Responses HTTP/SSE API directly for this first testing milestone. There are no third-party runtime dependencies. Default model: gpt-6-astra; low reasoning effort, 4096 maximum output tokens, and a 120-second per-request timeout. The application now uses the same Node runtime with a separate structured-response adapter and browser UI.
 
 The lab loads explicit prompt/example versions and pins their hashes per session. It supports interactive or single-turn Astrid conversations, advisory Matchy reviews against fictional records, and local transcript resumption. No application tools are advertised, so prompts explicitly distinguish conversation persistence from structured profile memory and real matchmaking actions.
 
@@ -91,11 +91,22 @@ FileSessionStore exposes load/save/lock operations. Saves use temporary files an
 
 Five offline tests cover stream fragmentation, incomplete results, safe errors, session history/resumption, locking, and prompt assembly. A live three-request gpt-6-astra smoke run passed on 2026-09-08: Astrid continued the story into care expectations; Matchy distinguished uncertain compatibility from a firm conflict. This is limited manual evidence, not a full prompt evaluation. See README.md for commands.
 
+## AD-011 — Local demo application and deliberate limits
+
+Implemented. The HTTP API and JsonFileRepository isolate the browser and agents from file layout. Application routes enforce participant ownership, consent, revisions, and chat membership. This is a replaceable persistence boundary, not a production database service. Participants are switched through tabs and profiles are edited explicitly; there is no login.
+
+Readiness requires confirmed, non-unknown understanding in seven topics. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
+
+Matchy receives pair-scoped memory. Private Astrid context receives only that person's memory and topic-scoped clarification needs; free-form pair rationale is kept out. Introductions receive public profiles and appropriately authorized details. The shared opening and departure are persisted together after double acceptance. Later connection messages do not go to an agent. Check-ins are private and manually requested; full post-date learning is deferred.
+
+Offline mode is visibly scripted and exercises state transitions without a provider. Live mode uses current versioned prompts and validated structured outputs. Prepared demo fixtures and portrait assets are fictional; [asset provenance](web/assets/portraits/README.md) is recorded separately.
+
 ## Next decisions
 
-- UI framework and whether the prompt lab's Node runtime becomes the product backend.
-- Concrete API/tool schemas and enforcement mechanisms for the semantic contracts in AGENT_PROTOCOL.md.
-- File layout, safe persistence strategy, and resumable job implementation.
-- Identity/session model for switching between fictional demo participants.
-- Product questions tracked in PRODUCT_VISION.md, especially proposal lifecycle and concrete ethical limits.
-- Open-source license and attribution for any selectively reused code or assets.
+- Authentication, production access control, deployment, notifications, and data lifecycle policy.
+- A database-backed repository and multi-worker job handling when needed.
+- Richer clarification purpose/completion fields from AGENT_PROTOCOL.md, including partial responses and deliberate reopening of declined/deferred topics.
+- Broader attraction and distance preference modeling, proposal expiration, and participant-controlled reopening after decline.
+- Post-date learning and private check-in scheduling.
+- Further ethical boundary examples and live prompt improvements. Existing evals are known regressions, including the two conversation-derived cases; they do not replace long live conversations.
+- Open-source license selection and attribution review for any future reused code/assets.

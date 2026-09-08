@@ -1,9 +1,9 @@
 # Astrid ↔ Matchy protocol
 
 Version: 0.1.0
-Status: Agreed direction translated into a proposed semantic contract; not implemented.
+Status: Semantic target with an implemented local-demo subset. The exact current records, agent signatures, and routes are in [IMPLEMENTATION_CONTRACT.md](IMPLEMENTATION_CONTRACT.md); richer work-item fields below remain design requirements.
 
-This document defines handoffs and ownership. Exact API routes, tool names, and JSON schemas come with implementation. Product behavior lives in [PRODUCT_VISION.md](PRODUCT_VISION.md); technical decisions live in [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
+This document defines handoffs and ownership. Current API routes and structured agent results are defined in the implementation contract and src/agents.mjs. Product behavior lives in [PRODUCT_VISION.md](PRODUCT_VISION.md); technical decisions live in [ARCHITECTURE_DECISIONS.md](ARCHITECTURE_DECISIONS.md).
 
 ## Ownership
 
@@ -22,7 +22,7 @@ Astrid is one product identity, with participant-scoped conversations. Her conve
 | Review decision | Matchy → application | Propose, needs clarification, or no suitable match; reviewed revisions; concise evidence-based rationale; disqualifying conflicts and uncertainty; next step and what new information could change it. |
 | Authorized delivery task | Application → Astrid | Task type, audience, approved content, related proposal or permission record, current state, and allowed action. Types include proposal presentation, permission request, shared opening, and private check-in. |
 
-Every work item needs an identity, originating event/review, target, status, creation time, and relevant record revisions. Execution records identify role, prompt and example versions/hashes, protocol version, and model configuration. These are design requirements, not existing fields or tools.
+Every work item needs an identity, originating event/review, target, status, creation time, and relevant record revisions. Execution records identify role, prompt and example versions/hashes, protocol version, and model configuration. These are the full semantic requirements; the current implementation records revisions and prompt metadata but does not yet represent every field as a dedicated work-item record.
 
 ## Matching decisions
 
@@ -54,7 +54,7 @@ Safe briefs still need to preserve purpose: for example, “Understand which ext
 
 Permission grants identify owner, content/version, audience, and scope. Silence is not permission. Shared-chat content must be authorized for both recipients. Private check-ins use the participant's own conversation and permitted profile context, not subsequent messages from the pair's chat.
 
-The future context builder and tool/API layer must enforce these boundaries. Free-form model output is not automatically safe because it is labeled “safe brief”; validate its evidence and allowed content before delivery. Exact validation strategy remains an implementation decision.
+The current context builder and application API enforce scoped memory, versioned permission, and audience boundaries for the local demo. Free-form model output is not automatically safe because it is labeled “safe brief”; validate its evidence and allowed content before delivery. For the demo, Matchy returns an allowed topic and participant ID; Astrid reconstructs the question from that person's own context instead of receiving arbitrary candidate-specific prose.
 
 ## Worked exchange: apparent family mismatch
 
@@ -75,11 +75,19 @@ All people and statements here are fictional.
 - Bound each execution and its tool calls. Stop when waiting on a person; save a work item instead of holding a model loop open.
 - Only application-verified, explicit acceptance by both people opens a chat. Matchy's recommendation and Astrid's language cannot substitute for it.
 - The shared opening is a bounded task. The application records Astrid's departure and stops routing the pair's later messages to her.
-- Model/tool failures leave work retryable or visibly failed, not falsely completed. Exact transactional, retry, and recovery mechanisms remain open.
+- Model/tool failures leave work retryable or visibly failed, not falsely completed. The demo serializes file transactions, shows failed jobs, and requeues interrupted running jobs after restart; distributed execution and automatic retry policy remain open.
+
+## Implemented subset and limits
+
+The demo persists understanding changes, jobs, pair reviews, topic-scoped clarifications, permission requests, and proposals. Current clarification statuses are queued, answered, deferred, declined, and obsolete; there is no separate addressed or partial state, full purpose/completion-condition object, or general delivery-task queue. Astrid owns question timing within the next private conversation. Application code owns whether an answer is accepted and a proposal can proceed.
+
+Multiple proposals are allowed, edits stale pending proposals, and decline/withdrawal are recorded. No automatic proposal expiration exists. Matching jobs run after meaningful committed changes or a manual request, rather than a periodic schedule. Private check-ins are manually triggered. Shared opening, nudge, and departure are saved together after double acceptance; subsequent pair messages are not routed to Astrid.
+
+See [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the implemented lifecycle. A successful demo does not establish the fuller protocol's production reliability.
 
 ## Remaining design questions
 
-- Exact schemas, tool surfaces, context validation, and failure/retry mechanics.
+- Extending the implemented schemas toward the richer semantic work items above and production failure/retry mechanics.
 - Private check-in scheduling and notification behavior.
-- Product policy for expiration, withdrawal, multiple proposals, and changed understanding after proposal delivery.
+- Automatic expiration, reopening declined proposals, and handling changed understanding after an introduction already exists.
 - Concrete ethical refusal examples beyond the already-established violence, abuse, and coercion boundaries.

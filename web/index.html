@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#3d233e">
+  <title>Astrid for Love — a little more human</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="demo-bar"><span><i></i> FICTIONAL PEOPLE. REAL POSSIBILITIES.</span><span id="mode">Local demo</span></div>
+  <header class="masthead"><a class="wordmark" href="/">astrid<span>for love ✳</span></a><nav><button id="people-view" class="nav-active">Your world</button><button id="presenter-view">Behind the scenes</button></nav><span class="masthead-note">Good chemistry starts<br>with being understood.</span></header>
+  <section class="identity-bar"><span class="eyebrow">DEMO · SEE THROUGH THEIR EYES</span><div id="participants" class="participant-tabs" aria-label="Switch fictional participant"></div></section>
+  <div id="error" class="error-banner" role="alert" hidden></div>
+  <main id="workspace" class="workspace">
+    <aside class="sidebar"><div class="sidebar-title"><span class="eyebrow">YOUR LITTLE CORNER</span><span>↗</span></div><div id="conversation-nav"></div><div class="sidebar-bottom"><span class="asterisk">✳</span><h3>Less swiping.<br>More <em>something.</em></h3><p>Astrid gets to know you.<br>The whole, interesting you.</p><button id="review-matches" class="button subtle">Find a connection <span>↗</span></button><p class="fineprint">Introductions always take two yeses.</p></div></aside>
+    <section class="chat-panel"><header id="chat-heading" class="chat-heading"></header><div id="chat-content" class="chat-content" aria-live="polite"></div><div id="typing" class="typing" hidden><span>✳</span> Astrid is giving that some thought<span class="dots">…</span></div><form id="composer" class="composer"><label class="sr-only" for="message-input">Your message</label><textarea id="message-input" rows="1" placeholder="Tell Astrid what’s on your mind…" maxlength="12000"></textarea><button type="submit" id="send" aria-label="Send message">↑</button><p id="composer-note">Just between you and Astrid.</p></form></section>
+    <aside class="understanding"><div class="understanding-header"><span class="eyebrow">IN YOUR OWN WORDS</span><h2>What makes<br>you, <em>you.</em></h2><p>Astrid’s understanding is a work in progress. You get the final say.</p></div><div class="panel-tabs"><button id="memory-tab" class="selected">Understanding</button><button id="profile-tab">Your profile</button></div><div id="knowledge"></div></aside>
+  </main>
+  <main id="presenter" class="presenter" hidden></main>
+  <dialog id="editor"><form id="editor-form"></form></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

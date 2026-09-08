@@ -1,0 +1,463 @@
+{
+  "schemaVersion": 1,
+  "participants": [
+    {
+      "id": "maya",
+      "name": "Maya",
+      "age": 31,
+      "gender": "woman",
+      "pronouns": "she/her",
+      "interestedIn": [
+        "man"
+      ],
+      "location": "San Francisco",
+      "bio": "Architect, enthusiastic dinner host, and an unapologetic collector of very small bowls.",
+      "photo": "/assets/portraits/fictional-portraits.png",
+      "interests": [
+        "Design that tells a story",
+        "Dinner with too many courses",
+        "Sunday flea markets"
+      ],
+      "matchingEnabled": true,
+      "revision": 1,
+      "ageRange": [
+        28,
+        40
+      ],
+      "photoPosition": "0% center"
+    },
+    {
+      "id": "eli",
+      "name": "Eli",
+      "age": 33,
+      "gender": "man",
+      "pronouns": "he/him",
+      "interestedIn": [
+        "woman"
+      ],
+      "location": "San Francisco",
+      "bio": "Bookshop regular. Makes excellent pasta and has a wildly overambitious reading list.",
+      "photo": "/assets/portraits/fictional-portraits.png",
+      "interests": [
+        "Cooking for friends",
+        "Architecture walks",
+        "Books with marginalia"
+      ],
+      "matchingEnabled": true,
+      "revision": 1,
+      "ageRange": [
+        27,
+        40
+      ],
+      "photoPosition": "50% center"
+    },
+    {
+      "id": "theo",
+      "name": "Theo",
+      "age": 32,
+      "gender": "man",
+      "pronouns": "he/him",
+      "interestedIn": [
+        "woman"
+      ],
+      "location": "San Francisco",
+      "bio": "A designer who turns an ordinary Saturday into a very loosely planned adventure.",
+      "photo": "/assets/portraits/fictional-portraits.png",
+      "interests": [
+        "Modern architecture",
+        "Weekend escapes",
+        "Coffee with a view"
+      ],
+      "matchingEnabled": true,
+      "revision": 1,
+      "ageRange": [
+        27,
+        38
+      ],
+      "photoPosition": "100% center"
+    }
+  ],
+  "memories": [
+    {
+      "id": "maya-dating",
+      "participantId": "maya",
+      "topic": "dating",
+      "text": "I want a long-term monogamous relationship and have time to date thoughtfully.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-ambition",
+      "participantId": "maya",
+      "topic": "ambition",
+      "text": "I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-closeness",
+      "participantId": "maya",
+      "topic": "closeness",
+      "text": "I want affection and regular time together, with room for independent interests and private messages.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-relationships",
+      "participantId": "maya",
+      "topic": "relationships",
+      "text": "Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-repair",
+      "participantId": "maya",
+      "topic": "repair",
+      "text": "I want to discuss disagreements directly, take a short break when heated, and come back to work it out.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-convictions",
+      "participantId": "maya",
+      "topic": "convictions",
+      "text": "I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-family",
+      "participantId": "maya",
+      "topic": "family",
+      "text": "My mother may need to live with me; I have not yet explained what care I would expect a partner to provide.",
+      "status": "tentative",
+      "strength": "unknown",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-family"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-dating",
+      "participantId": "eli",
+      "topic": "dating",
+      "text": "I want a long-term monogamous relationship and have time to date thoughtfully.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-ambition",
+      "participantId": "eli",
+      "topic": "ambition",
+      "text": "I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-closeness",
+      "participantId": "eli",
+      "topic": "closeness",
+      "text": "I want affection and regular time together, with room for independent interests and private messages.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-relationships",
+      "participantId": "eli",
+      "topic": "relationships",
+      "text": "Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-repair",
+      "participantId": "eli",
+      "topic": "repair",
+      "text": "I want to discuss disagreements directly, take a short break when heated, and come back to work it out.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-convictions",
+      "participantId": "eli",
+      "topic": "convictions",
+      "text": "I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-family",
+      "participantId": "eli",
+      "topic": "family",
+      "text": "A parent can live with us if there is separate space and professional care; I would not become the default caregiver.",
+      "status": "confirmed",
+      "strength": "accepts",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-family"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-dating",
+      "participantId": "theo",
+      "topic": "dating",
+      "text": "I want a long-term monogamous relationship and have time to date thoughtfully.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-ambition",
+      "participantId": "theo",
+      "topic": "ambition",
+      "text": "I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-closeness",
+      "participantId": "theo",
+      "topic": "closeness",
+      "text": "I want affection and regular time together, with room for independent interests and private messages.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-relationships",
+      "participantId": "theo",
+      "topic": "relationships",
+      "text": "Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-repair",
+      "participantId": "theo",
+      "topic": "repair",
+      "text": "I want to discuss disagreements directly, take a short break when heated, and come back to work it out.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-convictions",
+      "participantId": "theo",
+      "topic": "convictions",
+      "text": "I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-family",
+      "participantId": "theo",
+      "topic": "family",
+      "text": "I will never live with a partner\u2019s parent; this is a firm boundary.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-family"
+      ],
+      "revision": 1,
+      "deleted": false
+    }
+  ],
+  "messages": [
+    {
+      "id": "fixture-maya-baseline",
+      "chatId": "astrid-maya",
+      "authorId": "maya",
+      "role": "user",
+      "text": "Prepared fictional conversation summary: I want a long-term monogamous relationship and have time to date thoughtfully. I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me. I want affection and regular time together, with room for independent interests and private messages. Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear. I want to discuss disagreements directly, take a short break when heated, and come back to work it out. I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "createdAt": "2026-09-08T16:00:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "fixture-maya-family",
+      "chatId": "astrid-maya",
+      "authorId": "maya",
+      "role": "user",
+      "text": "My mother may need to live with me; I have not yet explained what care I would expect a partner to provide.",
+      "createdAt": "2026-09-08T16:01:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "welcome-maya",
+      "chatId": "astrid-maya",
+      "authorId": "astrid",
+      "role": "assistant",
+      "text": "Good to see you, Maya. What\u2019s been the best part of your week?",
+      "createdAt": "2026-09-08T16:02:00.000Z"
+    },
+    {
+      "id": "fixture-eli-baseline",
+      "chatId": "astrid-eli",
+      "authorId": "eli",
+      "role": "user",
+      "text": "Prepared fictional conversation summary: I want a long-term monogamous relationship and have time to date thoughtfully. I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me. I want affection and regular time together, with room for independent interests and private messages. Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear. I want to discuss disagreements directly, take a short break when heated, and come back to work it out. I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "createdAt": "2026-09-08T16:00:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "fixture-eli-family",
+      "chatId": "astrid-eli",
+      "authorId": "eli",
+      "role": "user",
+      "text": "A parent can live with us if there is separate space and professional care; I would not become the default caregiver.",
+      "createdAt": "2026-09-08T16:01:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "welcome-eli",
+      "chatId": "astrid-eli",
+      "authorId": "astrid",
+      "role": "assistant",
+      "text": "Good to see you, Eli. What has been taking up your time lately?",
+      "createdAt": "2026-09-08T16:02:00.000Z"
+    },
+    {
+      "id": "fixture-theo-baseline",
+      "chatId": "astrid-theo",
+      "authorId": "theo",
+      "role": "user",
+      "text": "Prepared fictional conversation summary: I want a long-term monogamous relationship and have time to date thoughtfully. I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me. I want affection and regular time together, with room for independent interests and private messages. Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear. I want to discuss disagreements directly, take a short break when heated, and come back to work it out. I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "createdAt": "2026-09-08T16:00:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "fixture-theo-family",
+      "chatId": "astrid-theo",
+      "authorId": "theo",
+      "role": "user",
+      "text": "I will never live with a partner\u2019s parent; this is a firm boundary.",
+      "createdAt": "2026-09-08T16:01:00.000Z",
+      "fixture": true
+    },
+    {
+      "id": "welcome-theo",
+      "chatId": "astrid-theo",
+      "authorId": "astrid",
+      "role": "assistant",
+      "text": "Good to see you, Theo. What has been taking up your time lately?",
+      "createdAt": "2026-09-08T16:02:00.000Z"
+    }
+  ],
+  "proposals": [],
+  "chats": [],
+  "permissions": [],
+  "clarifications": [],
+  "reviews": [],
+  "jobs": [],
+  "events": []
+}
