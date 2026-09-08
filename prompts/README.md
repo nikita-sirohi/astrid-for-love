@@ -33,11 +33,9 @@ Astrid v0.4.0 was subsequently live-tested and showed stronger probing and trans
 
 ## Review cases
 
-Selected Astrid v0.6.0 and Matchy v0.4.0 completed the ten-case regression suite; results and limits are recorded in evals/RESULTS_REGRESSION_0_6_0.md. Both versions are now frozen for future comparisons. A fresh live user conversation remains pending.
 
 Live feedback on v0.5.0 identified a personal-value verdict before an otherwise useful question. Selected Astrid v0.6.0 redirects that judgment toward consequences and reciprocal willingness, while preserving boundaries against harm. It explicitly asks about gender attraction alongside dating goals. Matchy v0.4.0 uses stated mutual eligibility and avoids inferred identities or pronouns. The unchanged examples v0.3.0 remain the selected companion for v0.6.0. Previous role versions are preserved; the paused user conversation is not silently migrated.
 
-Astrid v0.5.0 has now been exercised in the full ten-case regression run with Matchy v0.3.0; see evals/RESULTS_REGRESSION_2026-09-08.md. Preserve these prompt/example assets for reproducibility. A live user-led conversation with v0.5.0 is still pending.
 
 After a behavioral prompt change, run `npm run eval` against the selected versions and manually review all ten cases against their existing rubrics. Keep this regression step separate from the five offline runtime tests and from live conversation testing. Record exact versions, evidence, failures, and limitations. Use explicit version flags to compare earlier prompts; the historical `eval:unseen` command still pins v0.2.0. Known teaching examples and previously used cases are not new generalization evidence.
 
@@ -45,10 +43,12 @@ Review revisions against the product demo and its branches: natural story-led pr
 
 ## Astrid v0.7.0
 
-Selected after live development feedback on v0.6.0: group missing age and gender basics briefly, leave registration logistics to the profile UI, then return to experience and values. Clear replies need no routine paraphrase. Uses unchanged examples v0.3.0; v0.6.0 and paused session live-with-user-05 stay frozen. This conversation is development feedback, not unseen evaluation. Ten-case regression completed; see [review and limitations](../evals/RESULTS_REGRESSION_0_7_0.md). Fresh live pacing validation remains pending.
 
 ## Memy and Astrid v0.8.0
 
 Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 removes memory-output and coverage-administration responsibilities; unchanged examples v0.3.0 remain selected. Application overlay v0.2.0 defines separated tasks. Earlier role and runtime prompts remain frozen. The personal `chat:memy` command exercises the actual sequential loop; the original lab/evals exercise role prompts in isolation.
 
-Memy integration and v0.8.0 role regression results: [validation and limits](../evals/RESULTS_MEMY_0_1_0.md).
+
+## Current application contracts
+
+Astrid v0.8.0, Memy v0.2.0, Matchy v0.5.0, runtime v0.3.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.

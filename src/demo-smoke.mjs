@@ -35,6 +35,13 @@ try {
   await app.chatMessage(chat.id,'maya','Fictional private shared message — not for Astrid.');
   const checkin=await app.checkin('maya',chat.id);
   console.log('Private check-in:',checkin.reply.text);
+  if(mode==='live') {
+    await app.converse('theo',"I'm 34, a man, and I only date women. I live in Berkeley.");
+    const profile=(await app.view('theo')).participant;
+    assert.equal(profile.age,34);assert.equal(profile.location,'Berkeley');assert.equal(profile.gender,'man');
+    assert.ok(profile.interestedIn.some(value=>['woman','women'].includes(value.toLowerCase())));
+    console.log('Explicit conversational profile facts reached matching fields.');
+  }
   console.log(`Lifecycle passed. State: ${repository.file}`);
 } catch(error) {console.error(error.message);process.exitCode=1;}
 finally {await app.close();}

@@ -82,7 +82,53 @@
       "id": "maya-dating",
       "participantId": "maya",
       "topic": "dating",
-      "text": "I want a long-term monogamous relationship and have time to date thoughtfully.",
+      "facet": "dating.intent",
+      "text": "I want a long-term relationship.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-dating-structure",
+      "participantId": "maya",
+      "topic": "dating",
+      "facet": "dating.structure",
+      "text": "I want a monogamous relationship; we would agree before becoming exclusive.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-dating-availability",
+      "participantId": "maya",
+      "topic": "dating",
+      "facet": "dating.availability",
+      "text": "I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-family-children",
+      "participantId": "maya",
+      "topic": "family",
+      "facet": "family.children",
+      "text": "I do not have children and want children eventually. I would share parenting responsibilities.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -96,7 +142,23 @@
       "id": "maya-ambition",
       "participantId": "maya",
       "topic": "ambition",
-      "text": "I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me.",
+      "facet": "ambition.work",
+      "text": "Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-ambition-money",
+      "participantId": "maya",
+      "topic": "ambition",
+      "facet": "ambition.money",
+      "text": "Separate accounts and proportional shared costs work for me; we each keep control of our personal spending.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -110,9 +172,25 @@
       "id": "maya-closeness",
       "participantId": "maya",
       "topic": "closeness",
-      "text": "I want affection and regular time together, with room for independent interests and private messages.",
+      "facet": "closeness.time",
+      "text": "I want affection and regular time together, with room for independent interests.",
       "status": "confirmed",
       "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-closeness-privacy",
+      "participantId": "maya",
+      "topic": "closeness",
+      "facet": "closeness.privacy",
+      "text": "Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone.",
+      "status": "confirmed",
+      "strength": "requires",
       "sharing": "private",
       "evidenceIds": [
         "fixture-maya-baseline"
@@ -124,7 +202,23 @@
       "id": "maya-relationships",
       "participantId": "maya",
       "topic": "relationships",
-      "text": "Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear.",
+      "facet": "relationships.exes",
+      "text": "I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear.",
+      "status": "confirmed",
+      "strength": "accepts",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-relationships-friends",
+      "participantId": "maya",
+      "topic": "relationships",
+      "facet": "relationships.friends",
+      "text": "Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -138,7 +232,23 @@
       "id": "maya-repair",
       "participantId": "maya",
       "topic": "repair",
-      "text": "I want to discuss disagreements directly, take a short break when heated, and come back to work it out.",
+      "facet": "repair.disagreement",
+      "text": "I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-repair-accountability",
+      "participantId": "maya",
+      "topic": "repair",
+      "facet": "repair.accountability",
+      "text": "If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -152,9 +262,25 @@
       "id": "maya-convictions",
       "participantId": "maya",
       "topic": "convictions",
-      "text": "I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "facet": "convictions.beliefs",
+      "text": "I am secular and do not need a partner to share a religion or attend religious services with me.",
       "status": "confirmed",
       "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "maya-convictions-flexibility",
+      "participantId": "maya",
+      "topic": "convictions",
+      "facet": "convictions.flexibility",
+      "text": "I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs.",
+      "status": "confirmed",
+      "strength": "accepts",
       "sharing": "private",
       "evidenceIds": [
         "fixture-maya-baseline"
@@ -174,13 +300,75 @@
         "fixture-maya-family"
       ],
       "revision": 1,
+      "deleted": false,
+      "facet": "family.household"
+    },
+    {
+      "id": "maya-family-care",
+      "participantId": "maya",
+      "topic": "family",
+      "facet": "family.care",
+      "text": "If my mother needs care, I will arrange professional care and take responsibility for organizing it. I would not expect my partner to become her caregiver.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-maya-baseline"
+      ],
+      "revision": 1,
       "deleted": false
     },
     {
       "id": "eli-dating",
       "participantId": "eli",
       "topic": "dating",
-      "text": "I want a long-term monogamous relationship and have time to date thoughtfully.",
+      "facet": "dating.intent",
+      "text": "I want a long-term relationship.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-dating-structure",
+      "participantId": "eli",
+      "topic": "dating",
+      "facet": "dating.structure",
+      "text": "I want a monogamous relationship; we would agree before becoming exclusive.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-dating-availability",
+      "participantId": "eli",
+      "topic": "dating",
+      "facet": "dating.availability",
+      "text": "I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-family-children",
+      "participantId": "eli",
+      "topic": "family",
+      "facet": "family.children",
+      "text": "I do not have children and want children eventually. I would share parenting responsibilities.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -194,7 +382,23 @@
       "id": "eli-ambition",
       "participantId": "eli",
       "topic": "ambition",
-      "text": "I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me.",
+      "facet": "ambition.work",
+      "text": "Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-ambition-money",
+      "participantId": "eli",
+      "topic": "ambition",
+      "facet": "ambition.money",
+      "text": "Separate accounts and proportional shared costs work for me; we each keep control of our personal spending.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -208,9 +412,25 @@
       "id": "eli-closeness",
       "participantId": "eli",
       "topic": "closeness",
-      "text": "I want affection and regular time together, with room for independent interests and private messages.",
+      "facet": "closeness.time",
+      "text": "I want affection and regular time together, with room for independent interests.",
       "status": "confirmed",
       "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-closeness-privacy",
+      "participantId": "eli",
+      "topic": "closeness",
+      "facet": "closeness.privacy",
+      "text": "Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone.",
+      "status": "confirmed",
+      "strength": "requires",
       "sharing": "private",
       "evidenceIds": [
         "fixture-eli-baseline"
@@ -222,7 +442,23 @@
       "id": "eli-relationships",
       "participantId": "eli",
       "topic": "relationships",
-      "text": "Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear.",
+      "facet": "relationships.exes",
+      "text": "I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear.",
+      "status": "confirmed",
+      "strength": "accepts",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-relationships-friends",
+      "participantId": "eli",
+      "topic": "relationships",
+      "facet": "relationships.friends",
+      "text": "Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -236,7 +472,23 @@
       "id": "eli-repair",
       "participantId": "eli",
       "topic": "repair",
-      "text": "I want to discuss disagreements directly, take a short break when heated, and come back to work it out.",
+      "facet": "repair.disagreement",
+      "text": "I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-repair-accountability",
+      "participantId": "eli",
+      "topic": "repair",
+      "facet": "repair.accountability",
+      "text": "If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -250,9 +502,25 @@
       "id": "eli-convictions",
       "participantId": "eli",
       "topic": "convictions",
-      "text": "I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "facet": "convictions.beliefs",
+      "text": "I am secular and do not need a partner to share a religion or attend religious services with me.",
       "status": "confirmed",
       "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "eli-convictions-flexibility",
+      "participantId": "eli",
+      "topic": "convictions",
+      "facet": "convictions.flexibility",
+      "text": "I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs.",
+      "status": "confirmed",
+      "strength": "accepts",
       "sharing": "private",
       "evidenceIds": [
         "fixture-eli-baseline"
@@ -272,13 +540,75 @@
         "fixture-eli-family"
       ],
       "revision": 1,
+      "deleted": false,
+      "facet": "family.household"
+    },
+    {
+      "id": "eli-family-care",
+      "participantId": "eli",
+      "topic": "family",
+      "facet": "family.care",
+      "text": "I would not become the default caregiver for a partner’s parent. I can support my partner emotionally while they arrange professional care.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-eli-baseline"
+      ],
+      "revision": 1,
       "deleted": false
     },
     {
       "id": "theo-dating",
       "participantId": "theo",
       "topic": "dating",
-      "text": "I want a long-term monogamous relationship and have time to date thoughtfully.",
+      "facet": "dating.intent",
+      "text": "I want a long-term relationship.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-dating-structure",
+      "participantId": "theo",
+      "topic": "dating",
+      "facet": "dating.structure",
+      "text": "I want a monogamous relationship; we would agree before becoming exclusive.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-dating-availability",
+      "participantId": "theo",
+      "topic": "dating",
+      "facet": "dating.availability",
+      "text": "I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-family-children",
+      "participantId": "theo",
+      "topic": "family",
+      "facet": "family.children",
+      "text": "I do not have children and want children eventually. I would share parenting responsibilities.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -292,7 +622,23 @@
       "id": "theo-ambition",
       "participantId": "theo",
       "topic": "ambition",
-      "text": "I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me.",
+      "facet": "ambition.work",
+      "text": "Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-ambition-money",
+      "participantId": "theo",
+      "topic": "ambition",
+      "facet": "ambition.money",
+      "text": "Separate accounts and proportional shared costs work for me; we each keep control of our personal spending.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -306,9 +652,25 @@
       "id": "theo-closeness",
       "participantId": "theo",
       "topic": "closeness",
-      "text": "I want affection and regular time together, with room for independent interests and private messages.",
+      "facet": "closeness.time",
+      "text": "I want affection and regular time together, with room for independent interests.",
       "status": "confirmed",
       "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-closeness-privacy",
+      "participantId": "theo",
+      "topic": "closeness",
+      "facet": "closeness.privacy",
+      "text": "Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone.",
+      "status": "confirmed",
+      "strength": "requires",
       "sharing": "private",
       "evidenceIds": [
         "fixture-theo-baseline"
@@ -320,7 +682,23 @@
       "id": "theo-relationships",
       "participantId": "theo",
       "topic": "relationships",
-      "text": "Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear.",
+      "facet": "relationships.exes",
+      "text": "I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear.",
+      "status": "confirmed",
+      "strength": "accepts",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-relationships-friends",
+      "participantId": "theo",
+      "topic": "relationships",
+      "facet": "relationships.friends",
+      "text": "Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -334,7 +712,23 @@
       "id": "theo-repair",
       "participantId": "theo",
       "topic": "repair",
-      "text": "I want to discuss disagreements directly, take a short break when heated, and come back to work it out.",
+      "facet": "repair.disagreement",
+      "text": "I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out.",
+      "status": "confirmed",
+      "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-repair-accountability",
+      "participantId": "theo",
+      "topic": "repair",
+      "facet": "repair.accountability",
+      "text": "If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner.",
       "status": "confirmed",
       "strength": "prefers",
       "sharing": "private",
@@ -348,9 +742,25 @@
       "id": "theo-convictions",
       "participantId": "theo",
       "topic": "convictions",
-      "text": "I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "facet": "convictions.beliefs",
+      "text": "I am secular and do not need a partner to share a religion or attend religious services with me.",
       "status": "confirmed",
       "strength": "prefers",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
+      ],
+      "revision": 1,
+      "deleted": false
+    },
+    {
+      "id": "theo-convictions-flexibility",
+      "participantId": "theo",
+      "topic": "convictions",
+      "facet": "convictions.flexibility",
+      "text": "I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs.",
+      "status": "confirmed",
+      "strength": "accepts",
       "sharing": "private",
       "evidenceIds": [
         "fixture-theo-baseline"
@@ -362,12 +772,28 @@
       "id": "theo-family",
       "participantId": "theo",
       "topic": "family",
-      "text": "I will never live with a partner\u2019s parent; this is a firm boundary.",
+      "text": "I will never live with a partner’s parent; this is a firm boundary.",
       "status": "confirmed",
       "strength": "requires",
       "sharing": "private",
       "evidenceIds": [
         "fixture-theo-family"
+      ],
+      "revision": 1,
+      "deleted": false,
+      "facet": "family.household"
+    },
+    {
+      "id": "theo-family-care",
+      "participantId": "theo",
+      "topic": "family",
+      "facet": "family.care",
+      "text": "I can support a partner emotionally while they arrange care for their parent. I would not take on regular hands-on caregiving.",
+      "status": "confirmed",
+      "strength": "requires",
+      "sharing": "private",
+      "evidenceIds": [
+        "fixture-theo-baseline"
       ],
       "revision": 1,
       "deleted": false
@@ -379,7 +805,7 @@
       "chatId": "astrid-maya",
       "authorId": "maya",
       "role": "user",
-      "text": "Prepared fictional conversation summary: I want a long-term monogamous relationship and have time to date thoughtfully. I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me. I want affection and regular time together, with room for independent interests and private messages. Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear. I want to discuss disagreements directly, take a short break when heated, and come back to work it out. I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "text": "Prepared fictional conversation summary: I want a long-term relationship. I want a monogamous relationship; we would agree before becoming exclusive. I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone. I do not have children and want children eventually. I would share parenting responsibilities. Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return. Separate accounts and proportional shared costs work for me; we each keep control of our personal spending. I want affection and regular time together, with room for independent interests. Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone. I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear. Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off. I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out. If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner. I am secular and do not need a partner to share a religion or attend religious services with me. I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs. If my mother needs care, I will arrange professional care and take responsibility for organizing it. I would not expect my partner to become her caregiver.",
       "createdAt": "2026-09-08T16:00:00.000Z",
       "fixture": true
     },
@@ -397,7 +823,7 @@
       "chatId": "astrid-maya",
       "authorId": "astrid",
       "role": "assistant",
-      "text": "Good to see you, Maya. What\u2019s been the best part of your week?",
+      "text": "Good to see you, Maya. What’s been the best part of your week?",
       "createdAt": "2026-09-08T16:02:00.000Z"
     },
     {
@@ -405,7 +831,7 @@
       "chatId": "astrid-eli",
       "authorId": "eli",
       "role": "user",
-      "text": "Prepared fictional conversation summary: I want a long-term monogamous relationship and have time to date thoughtfully. I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me. I want affection and regular time together, with room for independent interests and private messages. Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear. I want to discuss disagreements directly, take a short break when heated, and come back to work it out. I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "text": "Prepared fictional conversation summary: I want a long-term relationship. I want a monogamous relationship; we would agree before becoming exclusive. I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone. I do not have children and want children eventually. I would share parenting responsibilities. Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return. Separate accounts and proportional shared costs work for me; we each keep control of our personal spending. I want affection and regular time together, with room for independent interests. Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone. I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear. Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off. I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out. If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner. I am secular and do not need a partner to share a religion or attend religious services with me. I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs. I would not become the default caregiver for a partner’s parent. I can support my partner emotionally while they arrange professional care.",
       "createdAt": "2026-09-08T16:00:00.000Z",
       "fixture": true
     },
@@ -431,7 +857,7 @@
       "chatId": "astrid-theo",
       "authorId": "theo",
       "role": "user",
-      "text": "Prepared fictional conversation summary: I want a long-term monogamous relationship and have time to date thoughtfully. I care about meaningful work but protect evenings for friends and a partner. Separate accounts and proportional shared costs work for me. I want affection and regular time together, with room for independent interests and private messages. Close friendships matter. I am comfortable with an ex being a friend when boundaries and introductions are clear. I want to discuss disagreements directly, take a short break when heated, and come back to work it out. I am secular, want children eventually, and can accept different beliefs if neither person pressures the other.",
+      "text": "Prepared fictional conversation summary: I want a long-term relationship. I want a monogamous relationship; we would agree before becoming exclusive. I have room to date thoughtfully and can protect a couple of evenings a week to get to know someone. I do not have children and want children eventually. I would share parenting responsibilities. Meaningful work matters to me, but I protect evenings for a partner. During a demanding work week I would make a plan together and offer the same flexibility in return. Separate accounts and proportional shared costs work for me; we each keep control of our personal spending. I want affection and regular time together, with room for independent interests. Our messages stay private. I can answer an honest question for reassurance, but I do not want either of us checking the other person’s phone. I am not currently close with an ex. I am comfortable with a partner having an ex as a friend when boundaries and introductions are clear. Close friendships matter. I want us both to keep time with our friends, and I can adjust plans for an important occasion without cutting people off. I discuss disagreements directly, take a short break when heated, and agree on a time to come back to work it out. If I hurt someone, I want to hear what landed badly, apologize for my part, and agree on something I will change. I expect the same willingness from a partner. I am secular and do not need a partner to share a religion or attend religious services with me. I can accept different beliefs if neither person pressures the other. I would object to either of us insulting people for their beliefs. I can support a partner emotionally while they arrange care for their parent. I would not take on regular hands-on caregiving.",
       "createdAt": "2026-09-08T16:00:00.000Z",
       "fixture": true
     },
@@ -440,7 +866,7 @@
       "chatId": "astrid-theo",
       "authorId": "theo",
       "role": "user",
-      "text": "I will never live with a partner\u2019s parent; this is a firm boundary.",
+      "text": "I will never live with a partner’s parent; this is a firm boundary.",
       "createdAt": "2026-09-08T16:01:00.000Z",
       "fixture": true
     },

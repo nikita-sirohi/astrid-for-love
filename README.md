@@ -26,8 +26,8 @@ The server binds to `127.0.0.1`. Participant switching and the presenter view ar
 
 ## What is implemented
 
-- Private participant–Astrid conversations and seven areas of remembered understanding, with editable facts, uncertainty, requirement strength, and sharing controls.
-- Explicit profile editing for gender, attraction preferences, age range, biography, and matching opt-in. Conversation does not silently rewrite these profile settings.
+- Private participant–Astrid conversations with separate evidence-backed beliefs, grouped into seven areas. Each record has its own uncertainty, requirement strength, sharing controls, and revision history.
+- Explicit profile editing for age, gender, pronouns, location, attraction preferences, age range, biography, and matching opt-in. Memy also records explicitly stated profile facts from conversation. Conflicts with user-edited fields block matching until resolved; conversation never infers matching opt-in.
 - Persisted matching jobs triggered by understanding/profile changes or a manual review; Matchy can propose, ask for clarification, or withhold a match.
 - Photos and personalized proposal copy; two current acceptances are required before opening a connection chat.
 - An opening, nudge, and visible Astrid departure. Subsequent shared messages are not sent to an agent. A participant can request a private check-in.
@@ -44,7 +44,7 @@ npm run chat -- --session first-conversation
 npm run chat -- --role matchy --session review-one --file fixtures/matchy-review.txt
 ```
 
-Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.8.0 with conversation examples v0.3.0, and Matchy v0.4.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
+Type `/exit` to quit; repeat the command to resume. A session pins its role, prompt/example hashes, and model. Start a new session after changing them. Use `--version VERSION` to compare earlier prompts. Selected roles are Astrid v0.8.0 with conversation examples v0.3.0, and Matchy v0.5.0. In the lab, Matchy produces advisory text; it cannot operate the application. The app adds a separately versioned structured-output runtime contract.
 
 ## Validate
 
@@ -58,13 +58,13 @@ npm run eval -- --suite live-regressions
 
 Tests and the default demo smoke use offline responses. `--live` exercises real conversation, matching, introductions, and a private check-in, incurring API usage. Smoke runs create isolated local state under `.local/demo-smoke/` and do not reset the running demo. The original `npm run smoke` remains a three-request prompt-lab connectivity check.
 
-The default evaluation suite makes 21 requests across ten cases. The live-development regression suite makes six requests across two fictional cases. Both require manual rubric review; successful requests do not establish behavioral quality. See [evaluation methodology and results](evals/README.md). Live long conversations remain necessary for pacing and voice.
+The default evaluation suite makes 21 requests across ten cases. The live-development regression suite makes six requests across two fictional cases. Both require manual rubric review; successful requests do not establish behavioral quality. See [evaluation methodology](evals/README.md). Live long conversations remain necessary for pacing and voice.
 
-The implementation milestone passed 28 offline tests, a full live fictional lifecycle, and desktop/mobile browser walkthroughs. These are bounded checks, not a reliability guarantee across arbitrary conversations.
+Keep run outputs and temporary findings under ignored `.local/`; commit reusable test fixtures, prompts, and lasting product/architecture decisions.
 
 ## Persistence and recovery
 
-The app stores state in `.local/app/state.json`, using serialized transactions and temporary-file rename. Pending jobs survive restart; interrupted running jobs are requeued. The server uses an exclusive `.server.lock` to prevent two processes writing the same app store. After a crash, confirm that the old process has exited before removing a stale lock. This is not a distributed database or worker system.
+The app stores state in `.local/app/state.json`, using serialized transactions and temporary-file rename. `FileMemoryStore` exposes scoped reads, revisions, and writes through that repository; the HTTP API exposes listing, creation, editing, deletion, and history. Memory changes share the same atomic commit as profile revisions and consent invalidation. Legacy records remain readable without guessed facets; unclassified records do not satisfy readiness until clarified or edited. Reset only when you want fresh fictional demo data. Pending jobs survive restart; interrupted running jobs are requeued. The server uses an exclusive `.server.lock` to prevent two processes writing the same app store. After a crash, confirm that the old process has exited before removing a stale lock. This is not a distributed database or worker system.
 
 The CLI stores sessions separately in `.local/sessions/`, including transcripts, response continuation items, prompt metadata, usage, and safe attempt status. It uses per-session locks. Failed or incomplete turns do not become successful history, and no automatic provider retries occur. App conversation messages remain visible if the provider fails. Error messages do not expose raw provider bodies or credentials.
 
@@ -74,7 +74,8 @@ Requests use the Responses API with `store: false`; this does not itself guarant
 
 - [Product vision](PRODUCT_VISION.md), [architecture decisions](ARCHITECTURE_DECISIONS.md), [agent protocol](AGENT_PROTOCOL.md), and [implemented API contract](IMPLEMENTATION_CONTRACT.md).
 - [Versioned prompts](prompts/README.md) and [evaluation fixtures](evals/README.md).
-- `src/domain.mjs`: repository, consent, memory, proposals, and jobs.
+- `src/domain.mjs`: transactional file repository, consent, proposals, and jobs.
+- `src/memory-store.mjs`: scoped memory store API, independent records and revision history; `src/understanding.mjs`: specific questions and completion criteria.
 - `src/agents.mjs`: scoped agent contexts and structured Astra responses.
 - `src/server.mjs`: local HTTP API and static UI serving; `web/`: browser interface.
 - `src/runtime.mjs` and `src/cli.mjs`: streaming prompt laboratory.
@@ -84,7 +85,7 @@ No neighboring checkout is required, and no source code was copied from agent-lo
 
 ## Try the Memy conversation loop
 
-The app now runs **user → Memy → committed understanding → Astrid**, with Matchy working separately. Memy records evidence and flags consequential gaps; Astrid owns the conversation. A failed Memy call stops the reply; a failed Astrid call leaves committed memory intact. Existing topic-granularity limitations remain; see [demo gap report](DEMO_GAP_REPORT.md).
+The loop is **user → Memy → committed understanding/profile → Astrid**. Memy records individual beliefs and flags consequential gaps; Astrid owns the conversation. Matching runs separately.
 
 For a fresh personal conversation through this same loop, without fictional profile memories:
 

@@ -9,6 +9,9 @@ const expandedHistories = new Set();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
 const name = (id) => participant(id)?.name || id;
 const topicLabel = (id) => bootstrap.topics.find(t => t.id === id)?.label || id;
+const facetLabel = (id) => bootstrap.facets?.find(f => f.id === id)?.label;
+const profileFieldLabel = (id) => ({age:'Age',location:'Location',gender:'Gender',interestedIn:'Interested in dating',ageRange:'Preferred age range',pronouns:'Pronouns'})[id] || 'Profile detail';
+const profileValue = (value) => Array.isArray(value) ? value.join(', ') : String(value ?? 'Not yet shared');
 function avatar(person, className = '') {
   if (!person || person.id === 'astrid') return el('span', `avatar astrid-avatar ${className}`, '✳');
   const image = el('img', `avatar ${className}`); image.src = person.photo || ''; image.alt = person.name; image.style.objectPosition = person.photoPosition || 'center';
@@ -133,8 +136,18 @@ function renderChat() {
   if(nearBottom || !oldScroll) content.scrollTop = content.scrollHeight; else content.scrollTop = oldScroll;
 }
 function renderKnowledge() {
-  const signature = JSON.stringify([panel,data.memories,data.coverage,data.participant]); if(signature === knowledgeSignature) return; knowledgeSignature = signature;
+  const signature = JSON.stringify([panel,data.memories,data.coverage,data.coverageDetails,data.profileConflicts,data.clarifications,data.participant]); if(signature === knowledgeSignature) return; knowledgeSignature = signature;
   const target = $('#knowledge'); target.replaceChildren(); $('#memory-tab').classList.toggle('selected',panel === 'memory'); $('#profile-tab').classList.toggle('selected',panel === 'profile');
+  const conflicts=data.participant.profileConflicts || data.profileConflicts || [];
+  if(conflicts.length) {
+    const notice=el('aside','profile-conflicts'); notice.append(el('h3','','Let’s clear something up.'),el('p','','Something you told Astrid differs from your profile. Please check which details are right before your next introduction.'));
+    for(const conflict of conflicts) {
+      if(typeof conflict==='string') {notice.append(el('p','',conflict));continue;}
+      notice.append(el('p','',`${profileFieldLabel(conflict.field)}: your profile says “${profileValue(data.participant[conflict.field])}”; Astrid heard “${profileValue(conflict.proposedValue)}”.`));
+      if(conflict.field && Object.hasOwn(data.participant,conflict.field)) notice.append(button('Keep my profile value','text-button',async()=>{try {await mutate(`/api/participants/${activeId}/profile`,'PATCH',{[conflict.field]:data.participant[conflict.field]},'Your profile choice is confirmed.');}catch{}}));
+    }
+    notice.append(button('Check your profile','button subtle small',profileDialog)); target.append(notice);
+  }
   if(panel === 'profile') { renderProfile(target); return; }
   const count = bootstrap.topics.filter(t=>data.coverage[t.id]).length;
   const coverage = el('div','coverage'); coverage.append(append(el('div','coverage-heading'),el('span','','Getting to know you'),el('span','',`${count} / ${bootstrap.topics.length} areas explored`)));
@@ -145,9 +158,13 @@ function renderKnowledge() {
     if(!memories.length) group.append(el('p','topic-empty','Room for a conversation.'));
     for(const memory of memories) {
       const card = el('article','memory-card'); const meta = el('div','memory-meta');
+      if(facetLabel(memory.facet)) card.append(el('h4','memory-facet',facetLabel(memory.facet)));
       meta.append(el('span',`tag ${memory.status}`,memory.status === 'confirmed' ? 'Confirmed' : 'Astrid’s read'),el('span','tag',({requires:'Firm requirement',prefers:'Preference',accepts:'Open to',unknown:'Still exploring'})[memory.strength] || memory.strength),el('span','tag',memory.sharing === 'shareable' ? 'Shareable' : 'Private'));
       card.append(meta,el('p','',memory.text),append(el('div','memory-actions'),button('Edit','text-button',()=>memoryDialog(memory)),button('Remove','text-button',()=>removeMemory(memory)),memory.sharing === 'private' ? button('Sharing permission','text-button',()=>permissionDialog(memory)) : null)); group.append(card);
-    } target.append(group);
+    }
+    const unexplored=(bootstrap.facets||[]).filter(f=>f.topic===topic.id && data.coverageDetails && !data.coverageDetails[f.id]);
+    if(unexplored.length) group.append(el('p','topic-empty',`Still getting to know: ${unexplored.map(f=>f.label.toLowerCase()).join(', ')}.`));
+    target.append(group);
   }
   target.append(button('+ Add something Astrid should know','button subtle add-memory',()=>memoryDialog()));
 }
@@ -171,10 +188,13 @@ function dialog(title,description,fields,saveLabel,onSave) {
 }
 function memoryDialog(memory) {
   const topic = field('Area','select',memory?.topic || bootstrap.topics[0].id,bootstrap.topics.map(t=>[t.id,t.label]));
+  const facet=field('What part of this?','select','',[]);
+  const updateFacets=()=>{ facet.input.replaceChildren(); const choices=(bootstrap.facets||[]).filter(f=>f.topic===topic.input.value); for(const f of choices) {const option=el('option','',f.label);option.value=f.id;facet.input.append(option);} if(choices.some(f=>f.id===memory?.facet)) facet.input.value=memory.facet; facet.wrap.hidden=!choices.length; };
+  topic.input.addEventListener('change',updateFacets);updateFacets();
   const text = field('What should Astrid understand?','textarea',memory?.text); text.input.required = true;
   const strength = field('How firm is this?','select',memory?.strength || 'unknown',[['requires','A firm requirement'],['prefers','A preference'],['accepts','Something I’m open to'],['unknown','Still figuring it out']]);
   const sharing = field('Sharing','select',memory?.sharing || 'private',[['private','Keep private'],['shareable','Astrid may use this in introductions']]);
-  dialog(memory ? 'Let’s get you right.' : 'In your own words.','Your edits guide future conversations and matching. Past messages stay as they were.',[topic,text,strength,sharing],'Save understanding',()=>mutate(`/api/participants/${activeId}/memories${memory ? `/${memory.id}` : ''}`,memory ? 'PATCH' : 'POST',{topic:topic.input.value,text:text.input.value.trim(),status:'confirmed',strength:strength.input.value,sharing:sharing.input.value},'Understanding updated.'));
+  dialog(memory ? 'Let’s get you right.' : 'In your own words.','Your edits guide future conversations and matching. Past messages stay as they were.',[topic,facet,text,strength,sharing],'Save understanding',()=>mutate(`/api/participants/${activeId}/memories${memory ? `/${memory.id}` : ''}`,memory ? 'PATCH' : 'POST',{topic:topic.input.value,...(facet.input.value?{facet:facet.input.value}:{}),text:text.input.value.trim(),status:'confirmed',strength:strength.input.value,sharing:sharing.input.value},'Understanding updated.'));
 }
 function removeMemory(memory) { dialog('Forget this detail?','Astrid will stop using this understanding. The original conversation stays in your history.',[], 'Remove understanding',()=>mutate(`/api/participants/${activeId}/memories/${memory.id}`,'DELETE',undefined,'Understanding removed.')); }
 function permissionDialog(memory) {
@@ -182,10 +202,14 @@ function permissionDialog(memory) {
   dialog('A particular person, a particular detail.',`“${memory.text}” — This creates a permission request in your private chat, where you can approve or decline it.`,[recipient],'Create request',async()=>{ await mutate(`/api/participants/${activeId}/permissions`,'POST',{memoryId:memory.id,recipientId:recipient.input.value}); selectConversation('astrid'); });
 }
 function profileDialog() {
+  const age=field('Your age','number',data.participant.age);age.input.min=18;age.input.max=120;age.input.required=true;
+  const location=field('Where you live','text',data.participant.location);location.input.required=true;
   const p=data.participant; const gender=field('Your gender, in your words','text',p.gender); const pronouns=field('Pronouns','text',p.pronouns); const attracted=field('Genders you’re interested in dating (comma-separated)','text',p.interestedIn?.join(', ')); const minimum=field('Minimum age (18+)','number',p.ageRange?.[0]||18); minimum.input.min=18; const maximum=field('Maximum age','number',p.ageRange?.[1]||99); maximum.input.min=18; const bio=field('A little about you · shareable','textarea',p.bio); const enabled=field('Open to introductions','checkbox',p.matchingEnabled);
-  dialog('Your kind of connection.','No assumptions. Tell Astrid who you’re interested in meeting.',[gender,pronouns,attracted,minimum,maximum,bio,enabled],'Save profile',async()=>{
+  dialog('Your kind of connection.','No assumptions. Tell Astrid who you’re interested in meeting.',[age,location,gender,pronouns,attracted,minimum,maximum,bio,enabled],'Save profile',async()=>{
     const ageRange=[Number(minimum.input.value),Number(maximum.input.value)]; if(ageRange[0]<18||ageRange[1]<ageRange[0]) { showError('Please enter an adult age range with the maximum at least the minimum.'); throw new Error('Invalid age range'); }
-    await mutate(`/api/participants/${activeId}/profile`,'PATCH',{gender:gender.input.value.trim(),pronouns:pronouns.input.value.trim(),interestedIn:attracted.input.value.split(',').map(s=>s.trim()).filter(Boolean),ageRange,bio:bio.input.value.trim(),matchingEnabled:enabled.input.checked},'Profile updated.');
+    const values={age:Number(age.input.value),location:location.input.value.trim(),gender:gender.input.value.trim(),pronouns:pronouns.input.value.trim(),interestedIn:attracted.input.value.split(',').map(s=>s.trim()).filter(Boolean),ageRange,bio:bio.input.value.trim(),matchingEnabled:enabled.input.checked};
+    const changes=Object.fromEntries(Object.entries(values).filter(([key,value])=>JSON.stringify(value)!==JSON.stringify(p[key])));
+    if(Object.keys(changes).length) await mutate(`/api/participants/${activeId}/profile`,'PATCH',changes,'Profile updated.');
   });
 }
 function declineDialog(proposal) {
@@ -208,7 +232,7 @@ function renderPresenter(result) {
   const grid=el('div','presenter-grid'), reviews=el('section'), jobs=el('section'); reviews.append(el('h2','','Matching decisions')); jobs.append(el('h2','','Background work'));
   for(const review of [...result.reviews].reverse()) {
     const card=el('article','review-card'); card.append(el('span','tag',({propose:'A promising connection',needs_clarification:'A question worth asking',withhold:'Holding this introduction'})[review.decision] || review.decision),el('h3','',review.participantIds.map(name).join(' + ')),el('p','',review.reason));
-    for(const c of review.clarifications || []) card.append(el('p','',`${name(c.participantId)} · Explore ${topicLabel(c.topic).toLowerCase()}`));
+    for(const c of review.clarifications || []) {card.append(el('p','',`${name(c.participantId)} · ${c.uncertainty || `Explore ${topicLabel(c.topic).toLowerCase()}`}`));if(c.completionCondition) card.append(el('p','',`What would settle it: ${c.completionCondition}`));}
     const details=el('details'); details.append(el('summary','','Evidence & version record'),el('pre','',JSON.stringify({evidence:review.evidenceIds,revisions:review.revisions,model:review.metadata?.model || review.model,prompt:review.metadata?.prompt || review.prompt},null,2))); card.append(details); reviews.append(card);
   }
   if(!result.reviews.length) reviews.append(el('p','empty-state','No reviews yet. Start one above, or keep talking with Astrid.'));

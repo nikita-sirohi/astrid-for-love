@@ -2,6 +2,9 @@ import { readFile, mkdir, writeFile, rename } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { root } from './runtime.mjs';
+import { facets, facetFor, coverageDetails, safeClarification } from './understanding.mjs';
+import { FileMemoryStore } from './memory-store.mjs';
+import { profileFields, profileValue, applyProfileSuggestions } from './profiles.mjs';
 
 export const topics = [ ['dating','Dating & readiness'], ['family','Family & future'], ['ambition','Ambition & everyday life'],
   ['closeness','Closeness & privacy'], ['relationships','Friends & boundaries'], ['repair','Disagreement & repair'], ['convictions','Convictions & flexibility'] ].map(([id,label]) => ({id,label}));
@@ -15,12 +18,12 @@ function participant(state, id) { const p = state.participants.find(p => p.id ==
 function ownMemory(state, id, owner) { const m = state.memories.find(m => m.id === id && m.participantId === owner && !m.deleted); requireValue(m, 'Memory not found.', 404); return m; }
 function event(state, type, detail) { state.events.push({id:uid('event'),type,detail,createdAt:now()}); state.events = state.events.slice(-300); }
 function message(state, chatId, authorId, role, text) { const m = {id:uid('msg'),chatId,authorId,role,text,createdAt:now()}; state.messages.push(m); return m; }
-export function coverage(state, id) { return Object.fromEntries(topics.map(t => [t.id, state.memories.some(m => m.participantId===id && m.topic===t.id && !m.deleted && m.status==='confirmed' && m.strength!=='unknown')])); }
+export function coverage(state,id) {const details=coverageDetails(state,id);return Object.fromEntries(topics.map(t=>[t.id,facets.filter(f=>f.topic===t.id).every(f=>details[f.id])]));}
 function publicProfile(p) { const {id,name,age,gender,pronouns,location,bio,photo,photoPosition,interests} = p; return {id,name,age,gender,pronouns,location,bio,photo,photoPosition,interests}; }
 function invalidate(state, p, cause, changedTopics=[]) {
   p.revision++;
   for (const proposal of state.proposals.filter(x => x.status==='pending' && x.participantIds.includes(p.id))) proposal.status='stale';
-  for (const c of state.clarifications.filter(c=>c.participantId===p.id && c.status==='queued' && (!p.matchingEnabled||changedTopics.includes(c.topic)))) c.status='obsolete';
+  for (const c of state.clarifications.filter(c=>c.participantId===p.id && c.status==='queued' && (!p.matchingEnabled))) c.status='obsolete';
   event(state,'understanding_changed',`${p.name}: ${cause}`);
 }
 function enqueue(state, id) {
@@ -31,12 +34,13 @@ function enqueue(state, id) {
 }
 export function eligibility(a,b) {
   if (!a.matchingEnabled || !b.matchingEnabled) return 'Matching is paused.';
-  if (a.age<18 || b.age<18) return 'Only adults can participate.';
+  if (!Number.isInteger(a.age)||!Number.isInteger(b.age)||a.age<18 || b.age<18) return 'Only adults can participate.';
+  if(a.profileConflicts?.length||b.profileConflicts?.length)return 'Profile facts need confirmation.';
   if (!a.gender || !b.gender || !a.interestedIn.length || !b.interestedIn.length) return 'Dating preferences need clarification.';
-  const normalized=value=>value.trim().toLowerCase();
+  const normalized=value=>({men:'man',women:'woman'}[value.trim().toLowerCase()]||value.trim().toLowerCase());
   if (!a.interestedIn.some(g=>normalized(g)===normalized(b.gender)) || !b.interestedIn.some(g=>normalized(g)===normalized(a.gender))) return 'Stated gender preferences do not align in both directions.';
   if (a.ageRange && (b.age<a.ageRange[0] || b.age>a.ageRange[1]) || b.ageRange && (a.age<b.ageRange[0] || a.age>b.ageRange[1])) return 'Age preferences do not align.';
-  if (a.location!==b.location) return 'Distance preferences have not been established.';
+  if (!a.location||!b.location||a.location.trim().toLowerCase()!==b.location.trim().toLowerCase()) return 'Distance preferences have not been established.';
   return null;
 }
 
@@ -46,10 +50,10 @@ export class JsonFileRepository {
     await mkdir(dirname(this.file),{recursive:true,mode:0o700});
     try { this.state=JSON.parse(await readFile(this.file,'utf8')); }
     catch(e) { if(e.code!=='ENOENT') throw e; this.state=await this.seed(); await this.persist(this.state); }
-    requireValue(this.state.schemaVersion===1,'Unsupported local store version.',500);
-    await this.transact(s=>{for(const j of s.jobs) if(j.status==='running') j.status='queued';});
+    requireValue([1,2].includes(this.state.schemaVersion),'Unsupported local store version.',500);
+    await this.transact(s=>{s.schemaVersion=2;for(const m of s.memories){m.history??=[];m.facet??=null;}for(const c of s.clarifications)if(!facetFor(c.facet))c.status='obsolete';for(const j of s.jobs) if(j.status==='running') j.status='queued';});
   }
-  async seed() { return JSON.parse(await readFile(this.fixture,'utf8')); }
+  async seed() { const state=JSON.parse(await readFile(this.fixture,'utf8'));state.schemaVersion=2;return state; }
   async persist(state) { const temp=`${this.file}.${randomUUID()}.tmp`; await writeFile(temp,JSON.stringify(state,null,2)+'\n',{mode:0o600}); await rename(temp,this.file); }
   async read() { await this.chain; return clone(this.state); }
   async transact(fn) {
@@ -60,25 +64,25 @@ export class JsonFileRepository {
 }
 
 export class AstridApp {
-  constructor({repository,agents,mode='live'}) { this.repo=repository; this.agents=agents; this.mode=mode; this.busy=new Set(); this.workerRunning=false; this.stopped=false; }
+  constructor({repository,agents,mode='live',memoryStore}) { this.repo=repository; this.memoryStore=memoryStore||new FileMemoryStore(repository); this.agents=agents; this.mode=mode; this.busy=new Set(); this.workerRunning=false; this.stopped=false; }
   async init() { await this.repo.init(); this.kick(); }
   kick() { if(!this.stopped) { clearTimeout(this.timer); this.timer=setTimeout(()=>this.drain().catch(()=>{}),50); this.timer.unref?.(); } }
   async close() { this.stopped=true; clearTimeout(this.timer); while(this.workerRunning||this.busy.size) await new Promise(done=>setTimeout(done,25)); }
-  async bootstrap() { const s=await this.repo.read(); return {participants:s.participants.map(publicProfile),mode:this.mode,topics,fictional:true}; }
+  async bootstrap() { const s=await this.repo.read(); return {participants:s.participants.map(publicProfile),mode:this.mode,topics,facets,fictional:true}; }
   async view(id) {
     const s=await this.repo.read(); const p=participant(s,id);
-    return {participant:p,memories:s.memories.filter(m=>m.participantId===id&&!m.deleted),coverage:coverage(s,id),
+    return {participant:p,memories:this.memoryStore.records(s,id),coverage:coverage(s,id),coverageDetails:coverageDetails(s,id),profileConflicts:p.profileConflicts||[],
       messages:s.messages.filter(m=>m.chatId===`astrid-${id}`),
       proposals:s.proposals.filter(p=>p.participantIds.includes(id)).map(p=>({...p,introductions:{[id]:p.introductions[id]},other:publicProfile(participant(s,p.participantIds.find(x=>x!==id)))})),
       chats:s.chats.filter(c=>c.participantIds.includes(id)).map(c=>({...c,other:publicProfile(participant(s,c.participantIds.find(x=>x!==id))),messages:s.messages.filter(m=>m.chatId===c.id)})),
-      permissions:s.permissions.filter(p=>p.participantId===id),clarifications:s.clarifications.filter(c=>c.participantId===id),busy:this.busy.has(id)};
+      permissions:s.permissions.filter(p=>p.participantId===id),clarifications:s.clarifications.filter(c=>c.participantId===id).map(safeClarification).filter(Boolean),busy:this.busy.has(id)};
   }
   async presenter() { const s=await this.repo.read(); return {jobs:s.jobs,reviews:s.reviews,events:s.events,counts:{participants:s.participants.length,proposals:s.proposals.length,chats:s.chats.length},mode:this.mode}; }
   ownContext(s,id) {
     const p=participant(s,id); const privateMessages=s.messages.filter(m=>m.chatId===`astrid-${id}`);
-    return {participant:p,memories:s.memories.filter(m=>m.participantId===id&&!m.deleted),
+    return {participant:p,memories:this.memoryStore.records(s,id),memoryTombstones:s.memories.filter(m=>m.participantId===id&&m.deleted).map(({id,topic,facet})=>({id,topic,facet})),
       messages:privateMessages.slice(p.contextAfterMessageCount||0).slice(-40),
-      clarifications:s.clarifications.filter(c=>c.participantId===id&&c.status==='queued').map(({id,participantId,topic,status})=>({id,participantId,topic,status})),
+      clarifications:s.clarifications.filter(c=>c.participantId===id&&c.status==='queued').map(safeClarification).filter(Boolean),
       permissionRecipients:s.participants.filter(other=>other.id!==id&&!eligibility(p,other)).map(publicProfile)};
   }
   async converse(id,text) {
@@ -90,25 +94,21 @@ export class AstridApp {
       const result=await this.agents.understand(this.ownContext(s,id));
       const memoryUpdates=await this.repo.transact(d=>{
         const p=participant(d,id); requireValue(p.revision===revision,'Your understanding changed while Astrid was replying. Send another message to continue with the updated context.',409);
-        const updates=[];
         const validEvidence=new Set(this.ownContext(d,id).messages.filter(m=>m.role==='user').map(m=>m.id));
-        for(const candidate of (result.memories||[]).slice(0,8)) {
-          if(!topics.some(t=>t.id===candidate.topic)||typeof candidate.text!=='string'||!candidate.text.trim()) continue;
-          if(!candidate.evidenceIds?.length||candidate.evidenceIds.some(e=>!validEvidence.has(e))) continue;
-          if(d.memories.some(m=>m.participantId===id&&m.topic===candidate.topic&&(m.userLocked||m.deleted))) continue;
-          const existing=candidate.id?d.memories.find(m=>m.id===candidate.id&&m.participantId===id&&!m.deleted):d.memories.find(m=>m.participantId===id&&m.topic===candidate.topic&&!m.deleted);
-          if(candidate.id&&!existing) continue;
-          const patch={topic:candidate.topic,text:textValue(candidate.text),status:['confirmed','tentative'].includes(candidate.status)?candidate.status:'tentative',strength:['requires','prefers','accepts','unknown'].includes(candidate.strength)?candidate.strength:'unknown',evidenceIds:candidate.evidenceIds};
-          if(existing&&existing.text===patch.text&&existing.status===patch.status&&existing.strength===patch.strength) continue;
-          if(existing) { Object.assign(existing,patch,{revision:existing.revision+1}); updates.push(existing); }
-          else {const memory={id:uid('memory'),participantId:id,...patch,sharing:'private',revision:1,deleted:false};d.memories.push(memory);updates.push(memory);}
+        const updates=this.memoryStore.applyInTransaction(d,id,result.memories,validEvidence);
+        const profileChanged=applyProfileSuggestions(p,result.profileUpdates,input.id);
+        let clarificationChanged=false;
+        for(const update of result.clarificationUpdates||[]) {
+          const c=d.clarifications.find(c=>c.id===update.id&&c.participantId===id&&c.status==='queued');
+          if(!c||!update.evidenceIds?.includes(input.id)||update.evidenceIds.some(e=>e!==input.id))continue;
+          if(update.status==='answered'&&!updates.some(m=>m.facet===c.facet&&m.status==='confirmed'&&m.evidenceIds.includes(input.id)))continue;
+          if(['answered','deferred','declined','obsolete'].includes(update.status)){c.status=update.status;c.answerEvidenceIds=update.evidenceIds;clarificationChanged=true;}
         }
-        for(const update of result.clarificationUpdates||[]) {const c=d.clarifications.find(c=>c.id===update.id&&c.participantId===id&&c.status==='queued'); if(c&&['answered','deferred','declined'].includes(update.status)) c.status=update.status;}
-        if(updates.length) { invalidate(d,p,'conversation clarified an expectation',updates.map(m=>m.topic)); enqueue(d,id); }
-        return updates;
+        if(updates.length||profileChanged||clarificationChanged) {invalidate(d,p,'conversation updated understanding');enqueue(d,id);}
+        return {updates,revision:p.revision};
       });
       const current=await this.repo.read(); const currentRevision=participant(current,id).revision;
-      requireValue(currentRevision===revision+(memoryUpdates.length?1:0),'Your understanding changed while Memy was recording it. Send another message to continue.',409);
+      requireValue(currentRevision===memoryUpdates.revision,'Your understanding changed while Memy was recording it. Send another message to continue.',409);
       const understanding={gaps:(result.gaps||[]).filter(g=>topics.some(t=>t.id===g.topic)&&typeof g.reason==='string').slice(0,3)};
       const response=await this.agents.converse({...this.ownContext(current,id),understanding});
       return await this.repo.transact(d=>{
@@ -119,34 +119,27 @@ export class AstridApp {
         const reply=message(d,`astrid-${id}`,'astrid','assistant',textValue(response.reply));
         reply.metadata=response.metadata;
         reply.understandingMetadata=result.metadata;
-        return {message:input,reply,memoryUpdates};
+        return {message:input,reply,memoryUpdates:memoryUpdates.updates};
       });
     } finally { this.busy.delete(id); this.kick(); }
   }
   async profile(id,patch) {
-    const result=await this.repo.transact(s=>{const p=participant(s,id);
-      for(const key of ['gender','pronouns','bio']) if(patch[key]!==undefined) p[key]=textValue(patch[key],key==='bio'?500:80);
-      if(patch.interestedIn!==undefined) {requireValue(Array.isArray(patch.interestedIn)&&patch.interestedIn.length<=20&&patch.interestedIn.every(x=>typeof x==='string'&&x.trim()&&x.length<80),'Invalid gender preferences.');p.interestedIn=[...new Set(patch.interestedIn.map(x=>x.trim()))];}
-      if(patch.matchingEnabled!==undefined) {requireValue(typeof patch.matchingEnabled==='boolean','Invalid matching setting.');p.matchingEnabled=patch.matchingEnabled;}
-      if(patch.ageRange!==undefined) {requireValue(Array.isArray(patch.ageRange)&&patch.ageRange.length===2&&patch.ageRange.every(Number.isInteger)&&patch.ageRange[0]>=18&&patch.ageRange[1]>=patch.ageRange[0]&&patch.ageRange[1]<=120,'Invalid adult age range.');p.ageRange=patch.ageRange;}
-      invalidate(s,p,'profile updated',['dating']);enqueue(s,id);return {participant:p};});this.kick();return result;
+    const result=await this.repo.transact(s=>{const p=participant(s,id);p.profileFieldLocks??={};p.profileConflicts??=[];p.profileEvidence??={};
+      try {for(const field of [...profileFields,'bio'])if(patch[field]!==undefined){p[field]=profileValue(field,patch[field]);p.profileFieldLocks[field]=true;p.profileConflicts=p.profileConflicts.filter(c=>c.field!==field);p.profileEvidence[field]={source:'user_edit',evidenceIds:[]};}}catch(e){throw new AppError(e.message);}
+      if(patch.matchingEnabled!==undefined){requireValue(typeof patch.matchingEnabled==='boolean','Invalid matching setting.');p.matchingEnabled=patch.matchingEnabled;}
+      p.contextAfterMessageCount=s.messages.filter(m=>m.chatId===`astrid-${id}`).length;
+      invalidate(s,p,'profile updated');enqueue(s,id);return {participant:p};});this.kick();return result;
   }
+  async listMemories(id) {await this.repo.read().then(s=>participant(s,id));return {memories:await this.memoryStore.list(id)};}
+  async memoryHistory(id,memoryId) {const s=await this.repo.read();requireValue(s.memories.some(m=>m.id===memoryId&&m.participantId===id),'Memory not found.',404);return {revisions:await this.memoryStore.history(id,memoryId)};}
   async editMemory(id,memoryId,patch,remove=false) {
     const result=await this.repo.transact(s=>{
-      const p=participant(s,id); let m=memoryId?ownMemory(s,memoryId,id):{id:uid('memory'),participantId:id,revision:0,sharing:'private',status:'confirmed',strength:'prefers',evidenceIds:[],deleted:false};
-      if(remove) m.deleted=true;
-      else {
-        if(patch.text!==undefined) m.text=textValue(patch.text);
-        if(patch.topic!==undefined) {requireValue(topics.some(t=>t.id===patch.topic),'Invalid memory topic.');m.topic=patch.topic;}
-        for(const [key,allowed] of Object.entries({status:['confirmed','tentative'],strength:['requires','prefers','accepts','unknown'],sharing:['private','shareable']})) if(patch[key]!==undefined) {requireValue(allowed.includes(patch[key]),`Invalid ${key}.`);m[key]=patch[key];}
-        requireValue(m.text&&m.topic,'Text and topic are required.');
-      }
-      m.revision++;m.userLocked=true;
-      if(!memoryId) s.memories.push(m);
-      // Prevent earlier statements reintroducing corrected/deleted beliefs into model context.
+      const p=participant(s,id);if(memoryId)ownMemory(s,memoryId,id);
+      let m;try {m=this.memoryStore.editInTransaction(s,id,memoryId,patch,remove);}catch(e){throw new AppError(e.message);}
       p.contextAfterMessageCount=s.messages.filter(x=>x.chatId===`astrid-${id}`).length;
-      for(const permission of s.permissions.filter(x=>x.memoryId===m.id)) permission.status='denied';
-      invalidate(s,p,remove?'memory removed':'memory corrected',[m.topic]);enqueue(s,id);return remove?{ok:true}:{memory:m};
+      for(const permission of s.permissions.filter(x=>x.memoryId===m.id))permission.status='denied';
+      for(const c of s.clarifications.filter(c=>c.participantId===id&&c.status==='queued'&&c.evidenceIds?.includes(m.id)))c.status='obsolete';
+      invalidate(s,p,remove?'memory removed':'memory corrected');enqueue(s,id);return remove?{ok:true}:{memory:m};
     });this.kick();return result;
   }
   addPermission(s,id,{memoryId,recipientId}) {
@@ -181,10 +174,10 @@ export class AstridApp {
       if(this.pairBlocked(s,ids)) continue;
       const revisions={[a.id]:a.revision,[b.id]:b.revision};let result;
       const constraint=eligibility(a,b);
-      const missing=ids.flatMap(id=>Object.entries(coverage(s,id)).filter(([,covered])=>!covered).map(([topic])=>({participantId:id,topic})));
+      const missing=ids.flatMap(id=>Object.entries(coverageDetails(s,id)).filter(([,covered])=>!covered).map(([facet])=>({participantId:id,topic:facetFor(facet).topic,facet,evidenceIds:s.memories.filter(m=>m.participantId===id&&m.facet===facet&&!m.deleted).map(m=>m.id)})));
       if(constraint) result={decision:'withhold',reason:constraint,evidenceIds:[],clarifications:[]};
       else if(missing.length) result={decision:'needs_clarification',reason:'A basic understanding is still missing. Astrid should clarify the open topic before proposing.',evidenceIds:[],clarifications:missing.slice(0,2)};
-      else result=await this.agents.review({participants:[a,b],memories:s.memories.filter(m=>ids.includes(m.participantId)&&!m.deleted),previousReviews:s.reviews.filter(r=>ids.every(id=>r.participantIds.includes(id)&&r.revisions?.[id]===revisions[id])).slice(-4)});
+      else result=await this.agents.review({participants:[a,b],memories:ids.flatMap(id=>this.memoryStore.records(s,id)),previousReviews:s.reviews.filter(r=>ids.every(id=>r.participantIds.includes(id)&&r.revisions?.[id]===revisions[id])).slice(-4)});
       requireValue(['propose','needs_clarification','withhold'].includes(result.decision),'Invalid matching result.',502);
       const knownEvidence=new Set(s.memories.filter(m=>ids.includes(m.participantId)&&!m.deleted).map(m=>m.id));
       requireValue((result.evidenceIds||[]).every(id=>knownEvidence.has(id)),'Matching review cited unknown evidence.',502);
@@ -200,10 +193,13 @@ export class AstridApp {
         if(ids.some(id=>participant(d,id).revision!==revisions[id])) {event(d,'stale_review','A review was discarded after an understanding changed.');return;}
         const review={id:uid('review'),participantIds:ids,decision:result.decision,reason:textValue(result.reason,8000),evidenceIds:result.evidenceIds||[],clarifications:[],revisions,createdAt:now(),metadata:result.metadata};d.reviews.push(review);d.jobs.find(j=>j.id===job.id)?.reviewIds.push(review.id);
         for(const c of result.clarifications||[]) {
-          if(!ids.includes(c.participantId)||!topics.some(t=>t.id===c.topic))continue;
-          // Only topic survives the privacy boundary, never the model's pair-specific question/rationale.
-          review.clarifications.push({participantId:c.participantId,topic:c.topic});
-          if(!d.clarifications.some(x=>x.participantId===c.participantId&&x.topic===c.topic&&['queued','deferred','declined'].includes(x.status)))d.clarifications.push({id:uid('clarification'),participantId:c.participantId,topic:c.topic,status:'queued',createdAt:now()});
+          const f=facetFor(c.facet);if(!ids.includes(c.participantId)||!f||f.topic!==c.topic)continue;
+          const evidenceIds=c.evidenceIds||[];
+          if(evidenceIds.some(id=>!d.memories.some(m=>m.id===id&&m.participantId===c.participantId&&m.facet===f.id&&!m.deleted)))continue;
+          const memoryRevisions=Object.fromEntries(evidenceIds.map(id=>[id,d.memories.find(m=>m.id===id).revision]));
+          const handoff={participantId:c.participantId,topic:f.topic,facet:f.id,evidenceIds,memoryRevisions};
+          review.clarifications.push(handoff);
+          if(!d.clarifications.some(x=>x.participantId===c.participantId&&x.facet===f.id&&['queued','deferred','declined'].includes(x.status)))d.clarifications.push({id:uid('clarification'),...handoff,status:'queued',createdAt:now()});
         }
         if(result.decision==='propose'&&!this.pairBlocked(d,ids)&&!eligibility(participant(d,a.id),participant(d,b.id))) {
           d.proposals.push({id:uid('proposal'),participantIds:ids,status:'pending',decisions:{[a.id]:'pending',[b.id]:'pending'},introductions:intros,createdAt:now(),chatId:null,reviewId:review.id,revisions});

@@ -94,12 +94,12 @@ test('permission grants are content-version and recipient scoped; denial and edi
   await assert.rejects(app.decidePermission('maya', permission.id, 'granted'), error => error.status === 409);
 });
 
-test('corrections suppress older messages and resist agent resurrection; deletion blocks topic writes', async t => {
+test('corrections suppress older messages and resist agent resurrection; deletion blocks the removed record without erasing other beliefs', async t => {
   const contexts = [];
   const { app, repository } = await setup(t, { understand: async context => {
     contexts.push(context);
     const evidence = context.messages.filter(m => m.role === 'user').at(-1).id;
-    return { reply: 'What matters most about that?', memories: [{ topic: 'family', text: 'Resurrected old assumption', status: 'confirmed', strength: 'requires', evidenceIds: [evidence] }] };
+    return { reply: 'What matters most about that?', memories: [{ id: 'maya-family', topic: 'family', facet: 'family.household', text: 'Resurrected old assumption', status: 'confirmed', strength: 'requires', evidenceIds: [evidence] }] };
   } });
   await app.editMemory('maya', 'maya-family', { text: 'A corrected family expectation.', status: 'confirmed', strength: 'prefers' });
   await app.converse('maya', 'Let us keep talking.');
@@ -108,9 +108,9 @@ test('corrections suppress older messages and resist agent resurrection; deletio
   assert.equal((await app.view('maya')).memories.find(m => m.id === 'maya-family').text, 'A corrected family expectation.');
   await app.editMemory('maya', 'maya-family', {}, true);
   await app.converse('maya', 'New conversation after deletion.');
-  assert.ok(!contexts[1].memories.some(m => m.topic === 'family'));
+  assert.ok(!contexts[1].memories.some(m => m.id === 'maya-family'));
   assert.equal(contexts[1].messages.length, 1);
-  assert.ok(!(await app.view('maya')).memories.some(m => m.topic === 'family'));
+  assert.ok(!(await app.view('maya')).memories.some(m => m.id === 'maya-family'));
   assert.ok((await repository.read()).memories.find(m => m.id === 'maya-family').deleted);
   await assert.rejects(app.editMemory('eli', 'maya-family', { text: 'Wrong owner' }), notFound);
 });

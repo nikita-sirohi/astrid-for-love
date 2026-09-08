@@ -4,9 +4,9 @@ Implemented local-demo contract, 2026-09-08. See [README.md](README.md) for star
 
 ## Implementation status
 
-Implemented by src/domain.mjs, src/server.mjs, src/agents.mjs, and web/. The app uses a single file-backed writer process with a server lock, serialized transactions, and restart recovery for running jobs. There is no authentication, periodic scheduler, or full post-date learning workflow. Profile changes are explicit UI/API edits; conversation does not silently change gender, attraction preferences, or matching opt-in. Matching-disabled participants retain existing chats.
+Implemented by src/domain.mjs, src/server.mjs, src/agents.mjs, and web/. The app uses a single file-backed writer process with a server lock, serialized transactions, and restart recovery for running jobs. There is no authentication, periodic scheduler, or full post-date learning workflow. Explicit conversational profile facts update matching fields; UI field locks require resolution of conflicts or an explicit correction. Matching opt-in changes only through UI/API. Matching-disabled participants retain existing chats.
 
-The milestone passed 28 offline tests, a live fictional lifecycle (family understanding → proposal/withhold → double opt-in → private check-in), and desktop/mobile browser walkthroughs. These are scoped checks. The independent prompt lab and behavioral regression suites remain necessary.
+Validate with npm test and isolated offline/live demo smoke commands. Keep run-specific findings under ignored .local/.
 
 ## Domain shape
 
@@ -14,26 +14,28 @@ State: {schemaVersion, participants:[], memories:[], messages:[], proposals:[], 
 
 Participant: {id,name,age,gender,pronouns,interestedIn:[gender],location,bio,photo,interests:[],matchingEnabled,revision,ageRange:[min,max]}. All fixtures are clearly fictional adults. photo is a local asset path. interests and bio are shareable.
 
-Memory: {id,participantId,topic,text,status:'confirmed'|'tentative',strength:'requires'|'prefers'|'accepts'|'unknown',sharing:'private'|'shareable',evidenceIds:[],revision,deleted:false}. topic is one of dating,family,ambition,closeness,relationships,repair,convictions. User editing is authoritative, bumps participant revision, suppresses stale assumptions. Agent changes are tentative unless explicit direct evidence supports confirmed. Agent cannot change a user-locked/deleted memory.
+Memory: {id,participantId,topic,facet,text,status:'confirmed'|'tentative',strength:'requires'|'prefers'|'accepts'|'unknown',sharing:'private'|'shareable',evidenceIds:[],revision,history:[],deleted:false}. topic is one of dating,family,ambition,closeness,relationships,repair,convictions. User editing is authoritative, bumps participant revision, suppresses stale assumptions. Agent changes are tentative unless explicit direct evidence supports confirmed. Agent cannot change a user-locked/deleted memory.
 
 Message: {id,chatId,authorId,role:'user'|'assistant'|'system',text,createdAt}. Private chat IDs are astrid-PARTICIPANT; connection chat IDs are generated. authorId is participant ID or astrid/system.
 
 Proposal: {id,participantIds:[a,b],status:'pending'|'introduced'|'declined'|'withdrawn'|'stale',decisions:{[id]:'pending'|'accepted'|'declined'},introductions:{[recipientId]:text},createdAt,chatId:null|id,reviewId,revisions:{[id]:number}}. API only returns proposals involving active participant, with no private review rationale. intro uses shareable profiles plus specifically authorized memory only. Chat: {id,participantIds,astridPresent:false,createdAt,proposalId}; shared opening and departure persist as messages together when second acceptance is committed. Later chat messages never go to an agent.
 
-Permission: {id,participantId,memoryId,recipientId,status:'pending'|'granted'|'denied',text,createdAt,memoryRevision}. Grant authorizes exact memory version for named recipient, not global sharing. Clarification: {id,participantId,topic,status:'queued'|'answered'|'deferred'|'declined'|'obsolete',createdAt}; UI may show own clarifications. Free-form pair rationale never enters private Astrid context. Clarification questions are reconstructed from own memory and allowed topic.
+Permission: {id,participantId,memoryId,recipientId,status:'pending'|'granted'|'denied',text,createdAt,memoryRevision}. Grant authorizes exact memory version for named recipient, not global sharing. Clarification: {id,participantId,topic,facet,evidenceIds,memoryRevisions,uncertainty,completionCondition,status:'queued'|'answered'|'deferred'|'declined'|'obsolete',createdAt}; UI may show own clarifications. Free-form pair rationale never enters private Astrid context. Clarification questions and completion criteria derive from the selected semantic facet; evidence references are recipient-owned.
 
-Job: {id,kind:'matching',status:'queued'|'running'|'completed'|'failed',participantId,createdAt,error?,reviewIds?:[]}. Review: {id,participantIds,decision:'propose'|'needs_clarification'|'withhold',reason,evidenceIds:[],clarifications:[{participantId,topic}],revisions,createdAt,model?,prompt?}. Presenter-only.
+Job: {id,kind:'matching',status:'queued'|'running'|'completed'|'failed',participantId,createdAt,error?,reviewIds?:[]}. Review: {id,participantIds,decision:'propose'|'needs_clarification'|'withhold',reason,evidenceIds:[],clarifications:[{participantId,topic,facet,evidenceIds}],revisions,createdAt,model?,prompt?}. Presenter-only.
 
 ## HTTP API
 
 JSON throughout; errors {error}. Participant-scoped routes require X-Participant-Id equal to requested participant. This is a demo routing guard, not auth. Mutations refresh UI via GET. Server serializes state writes; model calls happen outside transactions with freshness checks at commit.
 
-- GET /api/bootstrap → {participants:[publicProfile],mode:'live'|'offline',topics:[{id,label}],fictional:true}
-- GET /api/participants/:id → {participant,memories,coverage:{[topic]:boolean},messages:[private],proposals,chats:[{...chat,other:publicProfile,messages}],permissions,clarifications,busy:boolean}
+- GET /api/bootstrap → {participants:[publicProfile],mode:'live'|'offline',topics:[{id,label}],facets,fictional:true}
+- GET /api/participants/:id → {participant,memories,coverage:{[topic]:boolean},coverageDetails:{[facet]:boolean},profileConflicts,messages:[private],proposals,chats:[{...chat,other:publicProfile,messages}],permissions,clarifications,busy:boolean}
 - POST /api/participants/:id/messages {text} → {message,reply?,memoryUpdates?,error?}. Async model work can take time; UI shows typing. User message persists even if agent fails. No character deltas initially: reliable completed-message transport first.
-- PATCH /api/participants/:id/profile {matchingEnabled?,gender?,pronouns?,interestedIn?,bio?,ageRange?} → {participant}
-- POST /api/participants/:id/memories {topic,text,status?,strength?,sharing?} → {memory}
-- PATCH /api/participants/:id/memories/:memoryId {text?,status?,strength?,sharing?,topic?} → {memory}
+- PATCH /api/participants/:id/profile {matchingEnabled?,age?,location?,gender?,pronouns?,interestedIn?,bio?,ageRange?} → {participant}
+- GET /api/participants/:id/memories → {memories}
+- GET /api/participants/:id/memories/:memoryId/history → {revisions}; owner-scoped, includes historical and removed records for user control; never passed to agents.
+- POST /api/participants/:id/memories {topic,facet,text,status?,strength?,sharing?} → {memory}
+- PATCH /api/participants/:id/memories/:memoryId {text?,status?,strength?,sharing?,topic?,facet?} → {memory}
 - DELETE /api/participants/:id/memories/:memoryId → {ok:true}
 - POST /api/participants/:id/matching {} → {job}; runs asynchronously, polling sees progress.
 - POST /api/participants/:id/permissions {memoryId,recipientId} → {permission}; demo-accessible explicit way to exercise sharing request. Agent may also request it with authorized recipient context.
@@ -49,9 +51,9 @@ JSON throughout; errors {error}. Participant-scoped routes require X-Participant
 
 `createAgents({mode:'live'|'offline'})` returns:
 
-- `understand({participant,memories,messages,clarifications})` → {memories:[{id?:existingId,topic,text,status,strength,evidenceIds:[]}],clarificationUpdates:[{id,status}],gaps:[{topic,reason}],metadata}. Memy runs first; validated changes commit before Astrid.
+- `understand({participant,memories,messages,clarifications})` → {memories:[{id?:existingId,topic,facet,text,status,strength,evidenceIds:[]}],profileUpdates:[{field,value:JSON-string,correction:boolean,evidenceIds}],clarificationUpdates:[{id,status,evidenceIds}],gaps:[{topic,reason}],metadata}. Memy runs first; validated changes commit before Astrid.
 - `converse({participant,memories,messages,clarifications,understanding:{gaps},permissionRecipients=[]})` → {reply,permissions:[{memoryId,recipientId}],metadata}. Astrid reads freshly committed own context and cannot write memory. The application checks participant revision at both commit boundaries.
-- `review({participants:[a,b],memories,previousReviews=[]})` → {decision:'propose'|'needs_clarification'|'withhold',reason,evidenceIds:[],clarifications:[{participantId,topic}],metadata}. Only candidate pair snapshots. Domain performs deterministic eligibility, readiness, previous decline, consent, and revision checks outside model.
+- `review({participants:[a,b],memories,previousReviews=[]})` → {decision:'propose'|'needs_clarification'|'withhold',reason,evidenceIds:[],clarifications:[{participantId,topic,facet,evidenceIds}],metadata}. Only candidate pair snapshots. Domain performs deterministic eligibility, readiness, previous decline, consent, and revision checks outside model.
 - `introduce({recipient,other,shareableMemories=[]})` → {text,metadata}. Only approved public data passed; generate 2–3 sentences with spark. No private pair rationale.
 - `checkin({participant,other,memories,messages})` → {reply,metadata}. Own private context, no shared messages; encourage self-disclosure without inventing knowledge of encounter.
 

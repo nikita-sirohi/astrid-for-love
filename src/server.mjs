@@ -35,6 +35,8 @@ export function createServer(app) {
           if(method==='GET'&&!rest)result=await app.view(id);
           else if(method==='POST'&&rest==='messages')result=await app.converse(id,(await body(req)).text);
           else if(method==='PATCH'&&rest==='profile')result=await app.profile(id,await body(req));
+          else if(method==='GET'&&rest==='memories')result=await app.listMemories(id);
+          else if(method==='GET'&&/^memories\/[^/]+\/history$/.test(rest||''))result=await app.memoryHistory(id,rest.split('/')[1]);
           else if(method==='POST'&&rest==='memories')result=await app.editMemory(id,null,await body(req));
           else if(rest?.startsWith('memories/')&&['PATCH','DELETE'].includes(method))result=await app.editMemory(id,rest.slice(9),method==='PATCH'?await body(req):{},method==='DELETE');
           else if(method==='POST'&&rest==='matching')result=await app.runMatching(id);

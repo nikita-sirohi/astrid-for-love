@@ -43,11 +43,8 @@ This makes 21 real API requests, using the same prompt assembly, model, reasonin
 
 ## Review method and limits
 
-The first run is assessed in [RESULTS_UNSEEN_V1.md](RESULTS_UNSEEN_V1.md), including a concrete matching error and limitations.
 
-The v0.5.0/v0.3.0 run is assessed in [RESULTS_REGRESSION_2026-09-08.md](RESULTS_REGRESSION_2026-09-08.md): all 21 requests completed, nine clean passes and one mixed result on manual review.
 
-The latest run is assessed in [RESULTS_REGRESSION_0_6_0.md](RESULTS_REGRESSION_0_6_0.md): Astrid v0.6.0 and Matchy v0.4.0, all 21 requests completed and all ten existing scoped rubrics met in this sample, with coverage limitations recorded.
 
 Write scenario-specific rubrics before the run. Review all outputs against them, including intermediate turns. Use pass, mixed, or fail with short response excerpts and a concrete explanation. A partial success with a material violation is mixed or fail, not a clean pass. Record transport errors separately. Do not grade by matching a prescribed sentence.
 
@@ -55,4 +52,4 @@ This first run is manually assessed by the same assistant that authored the suit
 
 Report what the model actually does without rewriting weak responses or silently rerunning cases until they pass. Do not change the role prompts in the same run. Once findings influence a prompt revision, this suite becomes a regression set; author a fresh unseen set to evaluate that revision's generalization.
 
-Live transcripts remain local by default. A reviewed report may quote limited fictional excerpts without publishing raw provider output, hidden/encrypted reasoning, credentials, or real participant data.
+Keep all run-specific findings and transcripts under ignored `.local/evals/`. Commit reusable fixtures and methodology, not ephemeral reports.

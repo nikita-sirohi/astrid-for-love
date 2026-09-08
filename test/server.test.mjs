@@ -22,12 +22,18 @@ test('HTTP API enforces private actors, rejects foreign origins, hides secrets, 
     assert.equal((await request('/api/bootstrap')).data.fictional,true);
     assert.equal((await request('/api/participants/maya/memories/maya-family','eli','PATCH',{text:'overwrite'})).status,403);
     const memory=await request('/api/participants/maya/memories/maya-family','maya','PATCH',{text:'My mother must live with me, with separate space and professional care; no partner caregiving.',status:'confirmed',strength:'requires'});
-    assert.equal(memory.status,200);await app.drain();
+    assert.equal(memory.status,200);
+    const historyPath='/api/participants/maya/memories/maya-family/history';
+    assert.equal((await request(historyPath,'eli')).status,403);
+    const history=await request(historyPath,'maya');assert.equal(history.status,200);assert.equal(history.data.revisions.length,2);
+    const records=await request('/api/participants/maya/memories','maya');assert.ok(records.data.memories.filter(m=>m.topic==='family').length>=3);assert.ok(records.data.memories.every(m=>!Object.hasOwn(m,'history')));
+    await app.drain();
     const proposal=(await request('/api/participants/maya','maya')).data.proposals.find(p=>p.status==='pending');assert.ok(proposal);
     const single=await request(`/api/proposals/${proposal.id}/decision`,'maya','POST',{decision:'accepted'});assert.equal(single.status,200);assert.equal(single.data.chat,undefined);assert.deepEqual(Object.keys(single.data.proposal.introductions),['maya']);
     const both=await request(`/api/proposals/${proposal.id}/decision`,'eli','POST',{decision:'accepted'});assert.equal(both.status,200);assert.equal(both.data.chat.astridPresent,false);
     const id=both.data.chat.id;assert.equal((await request(`/api/chats/${id}`,'theo')).status,404);
     const sent=await request(`/api/chats/${id}/messages`,'maya','POST',{text:'Hi Eli!'});assert.equal(sent.data.message.authorId,'maya');
     assert.equal((await request(`/api/chats/${id}`,'eli')).data.messages.at(-1).text,'Hi Eli!');
+    const edited=await request('/api/participants/maya/profile','maya','PATCH',{age:32,location:'Oakland'});assert.equal(edited.status,200);assert.equal(edited.data.participant.age,32);assert.equal(edited.data.participant.location,'Oakland');
   } finally {await app.close();await new Promise(done=>server.close(done));await rm(directory,{recursive:true,force:true});}
 });

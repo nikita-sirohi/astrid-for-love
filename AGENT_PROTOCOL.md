@@ -79,7 +79,7 @@ All people and statements here are fictional.
 
 ## Implemented subset and limits
 
-The demo persists understanding changes, jobs, pair reviews, topic-scoped clarifications, permission requests, and proposals. Current clarification statuses are queued, answered, deferred, declined, and obsolete; there is no separate addressed or partial state, full purpose/completion-condition object, or general delivery-task queue. Astrid owns question timing within the next private conversation. Application code owns whether an answer is accepted and a proposal can proceed.
+The demo persists understanding changes, jobs, pair reviews, facet-scoped clarifications, permission requests, and proposals. Current clarification statuses are queued, answered, deferred, declined, and obsolete; there is no separate addressed or partial state or general delivery-task queue; uncertainty and completion conditions derive from the shared semantic facet definitions. Astrid owns question timing within the next private conversation. Application code owns whether an answer is accepted and a proposal can proceed.
 
 Multiple proposals are allowed, edits stale pending proposals, and decline/withdrawal are recorded. No automatic proposal expiration exists. Matching jobs run after meaningful committed changes or a manual request, rather than a periodic schedule. Private check-ins are manually triggered. Shared opening, nudge, and departure are saved together after double acceptance; subsequent pair messages are not routed to Astrid.
 
@@ -94,4 +94,4 @@ See [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the implemented lifecycle. A 
 
 ## Implemented Memy handoff
 
-The current app adds Memy v0.1.0 before Astrid v0.8.0. `understand(ownContext)` returns memory suggestions with user evidence IDs, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. This does not yet implement the richer semantic clarification protocol above.
+The current app adds Memy v0.2.0 before Astrid v0.8.0. `understand(ownContext)` returns atomic memory suggestions with user evidence IDs, explicit profile updates, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. Matchy handoffs carry the exact facet and recipient-owned evidence IDs; the application derives safe uncertainty/completion text from shared definitions and includes evidence revisions. No free-form private pair assessment enters Astrid’s context. Memy’s answered disposition needs latest-user evidence for that facet, not simply another fact in the same broad topic.

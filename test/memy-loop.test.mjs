@@ -10,13 +10,13 @@ async function setup(t,agents) {
  const app=new AstridApp({repository,agents});app.kick=()=>{};await app.init();
  t.after(async()=>{await app.close();await rm(dir,{recursive:true,force:true});});return {app,repository};
 }
-const update=ctx=>({memories:[{id:'maya-family',topic:'family',text:'My mother needs her own space; I arrange her care.',status:'confirmed',strength:'requires',evidenceIds:[ctx.messages.at(-1).id]}],clarificationUpdates:[],gaps:[]});
+const update=ctx=>({memories:[{id:'maya-family',topic:'family',facet:'family.household',text:'My mother needs her own space; I arrange her care.',status:'confirmed',strength:'requires',evidenceIds:[ctx.messages.at(-1).id]}],clarificationUpdates:[],gaps:[]});
 test('Memy commits before Astrid reads context and Astrid cannot mutate memory',async t=>{
  let calls=[];let repository;
  const setupResult=await setup(t,{understand:async ctx=>{calls.push('memy');return update(ctx);},converse:async ctx=>{
  calls.push('astrid');assert.equal(ctx.memories.find(m=>m.id==='maya-family').status,'confirmed');
  assert.equal((await repository.read()).memories.find(m=>m.id==='maya-family').status,'confirmed');
- return {reply:'What would you make room for in return?',memories:[{topic:'family',text:'Do not save this'}]};}});
+ return {reply:'What would you make room for in return?',memories:[{topic:'family',facet:'family.household',text:'Do not save this'}]};}});
  repository=setupResult.repository;await setupResult.app.converse('maya','My mother needs her own space; I arrange her care.');
  assert.deepEqual(calls,['memy','astrid']);assert.ok(!JSON.stringify(await repository.read()).includes('Do not save this'));
 });
@@ -35,4 +35,14 @@ test('a user correction while Memy runs wins and prevents an outdated reply',asy
  await app.editMemory('maya','maya-family',{text:'Authoritative correction'});release();
  await assert.rejects(turn,e=>e.status===409);assert.equal(called,false);
  assert.equal((await app.view('maya')).memories.find(m=>m.id==='maya-family').text,'Authoritative correction');
+});
+
+test('fresh confirmation evidence can close a queued question without changing the belief wording',async t=>{
+ const {app,repository}=await setup(t,{understand:async ctx=>{
+  const memory=ctx.memories.find(m=>m.id==='maya-family');const evidenceIds=[ctx.messages.at(-1).id];
+  return {memories:[{...memory,evidenceIds}],clarificationUpdates:[{id:'confirm-household',status:'answered',evidenceIds}],gaps:[]};
+ },converse:async()=>({reply:'What has surprised you about dating lately?'})});
+ await repository.transact(s=>{s.memories.find(m=>m.id==='maya-family').status='confirmed';s.clarifications.push({id:'confirm-household',participantId:'maya',topic:'family',facet:'family.household',status:'queued',evidenceIds:['maya-family']});});
+ await app.converse('maya','Yes, that is exactly the household arrangement I mean.');
+ assert.equal((await repository.read()).clarifications.find(c=>c.id==='confirm-household').status,'answered');
 });

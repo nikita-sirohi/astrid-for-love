@@ -77,7 +77,7 @@ Accepted direction; semantic contract drafted in [AGENT_PROTOCOL.md](AGENT_PROTO
 
 Keep Matchy's private pair assessment separate from the participant-safe clarification brief. Context assembly must restrict information for each participant and for shared openings. Prompt guidance alone cannot guarantee a generated brief is safe; the implementation must validate content and permissions.
 
-Astrid's prompt teaches next-move selection and an opinionated but revisable point of view, supported by separately versioned authored conversations. Matchy's prompt requires a positive matching case, attention to disconfirming evidence, and prioritized clarification. The selected drafts have scoped regression results under evals/ and continue to need live conversation testing. The application implements a narrower handoff vocabulary documented in IMPLEMENTATION_CONTRACT.md.
+Astrid's prompt teaches next-move selection and an opinionated but revisable point of view, supported by separately versioned authored conversations. Matchy's prompt requires a positive matching case, attention to disconfirming evidence, and prioritized clarification. Regression fixtures live under evals/; run outputs and temporary findings stay under ignored .local/. Live conversation testing remains necessary. The application implements a narrower handoff vocabulary documented in IMPLEMENTATION_CONTRACT.md.
 
 ## AD-010 — Minimal executable prompt lab
 
@@ -97,7 +97,7 @@ Implemented. The HTTP API and JsonFileRepository isolate the browser and agents 
 
 Readiness requires confirmed, non-unknown understanding in seven topics. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
 
-Matchy receives pair-scoped memory. Private Astrid context receives only that person's memory and topic-scoped clarification needs; free-form pair rationale is kept out. Introductions receive public profiles and appropriately authorized details. The shared opening and departure are persisted together after double acceptance. Later connection messages do not go to an agent. Check-ins are private and manually requested; full post-date learning is deferred.
+Matchy receives pair-scoped memory. Private Astrid context receives only that person's memory and facet-scoped clarification needs; free-form pair rationale is kept out. Introductions receive public profiles and appropriately authorized details. The shared opening and departure are persisted together after double acceptance. Later connection messages do not go to an agent. Check-ins are private and manually requested; full post-date learning is deferred.
 
 Offline mode is visibly scripted and exercises state transitions without a provider. Live mode uses current versioned prompts and validated structured outputs. Prepared demo fixtures and portrait assets are fictional; [asset provenance](web/assets/portraits/README.md) is recorded separately.
 
@@ -105,7 +105,7 @@ Offline mode is visibly scripted and exercises state transitions without a provi
 
 - Authentication, production access control, deployment, notifications, and data lifecycle policy.
 - A database-backed repository and multi-worker job handling when needed.
-- Richer clarification purpose/completion fields from AGENT_PROTOCOL.md, including partial responses and deliberate reopening of declined/deferred topics.
+- Deliberate reopening of declined/deferred clarification topics and richer participant-authorized handoffs when a fixed semantic question is insufficient.
 - Broader attraction and distance preference modeling, proposal expiration, and participant-controlled reopening after decline.
 - Post-date learning and private check-in scheduling.
 - Further ethical boundary examples and live prompt improvements. Existing evals are known regressions, including the two conversation-derived cases; they do not replace long live conversations.
@@ -115,4 +115,16 @@ Offline mode is visibly scripted and exercises state transitions without a provi
 
 Memy owns evidence-backed memory suggestions, clarification status and at most two consequential gaps. On each user turn the application saves the message, calls Memy, validates and commits updates with a participant revision check, then calls Astrid with fresh memory and recent conversation. Astrid returns reply and permission requests only. Gaps are advisory, not interview assignments. Matchy runs independently from committed changes.
 
-Memy failure prevents a stale Astrid reply; Astrid failure retains already committed memory. Concurrent user edits invalidate in-flight results. The extra call adds measured latency; asynchronous memory extraction is not used. The existing topic-based memory representation remains a demo limitation, not solved by adding Memy.
+Memy failure prevents a stale Astrid reply; Astrid failure retains already committed memory. Concurrent user edits invalidate in-flight results. The extra call adds measured latency; asynchronous memory extraction is not used. Memory storage and handoff granularity are specified in AD-013 below.
+
+## AD-013: Atomic memory, semantic handoffs, and one matching profile
+
+Each memory is an independently editable belief, with a stable ID, topic, specific facet, user-message evidence, confirmation/strength, revision history, and sharing controls. Multiple beliefs coexist within a topic or facet. `FileMemoryStore` provides scoped list/history and transaction-aware apply/edit operations over the local JSON repository. HTTP list/create/edit/delete/history routes form the app boundary. Keeping memory, participant revision, and stale-proposal changes in one serialized file transaction prevents partial updates; a database adapter can preserve that transaction contract later.
+
+Readiness checks specific facets rather than treating one family fact as the entire family conversation. Missing or tentative facets remain unresolved. Memy must interpret substantive evidence; these guides are not an interview order. Legacy summaries are preserved unclassified instead of receiving invented coverage.
+
+Matchy selects a recipient, exact facet, and that recipient’s own evidence IDs. The application derives the uncertainty and completion condition from shared definitions, pins evidence revisions, and excludes private pair reasoning. Memy can close a clarification only using fresh evidence for the requested facet. Unrelated updates no longer close every question in a broad topic. Partial answers remain queued; declined/deferred questions remain suppressed.
+
+Explicit latest-user profile facts update the authoritative matching profile before Astrid replies. UI edits lock individual fields; a conflicting new statement requires resolution unless the user explicitly corrects the field. Unresolved conflicts block proposals. Opt-in remains an explicit UI/API decision. Age and location are editable.
+
+Temporary audit reports and evaluation findings are local artifacts, not repository documentation. Keep lasting decisions here and in product/protocol/prompt files; keep reusable tests and fixtures in code.
