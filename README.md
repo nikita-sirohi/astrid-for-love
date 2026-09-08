@@ -24,7 +24,7 @@ The offline command uses scripted agent responses; the personal interface stays 
 
 One process binds to `127.0.0.1` on ports 4310–4314 (or consecutively from `PORT`). Participant ports enforce a fixed identity and exclude operator endpoints; these local windows are not production authentication. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
 
-Start in Eli’s window: browse Elena, select **Astrid, thoughts?**, then express interest. Elena must separately accept before a shared chat opens. Live assessments can vary; the offline pool demonstrates an ordinary planning-versus-spontaneity uncertainty. Maya demonstrates a hold while baseline understanding is incomplete. Browse smoke state is isolated under `.local/browse-smoke/`.
+Start in Eli’s window: select Elena beneath the chat to see her illustrated portrait and Astrid’s assessment, then express interest. Elena must separately accept before a shared chat opens. Live assessments can vary; the offline pool demonstrates an ordinary planning-versus-spontaneity uncertainty. Maya demonstrates a hold while baseline understanding is incomplete. Browse smoke state is isolated under `.local/browse-smoke/`.
 
 ## What is implemented
 

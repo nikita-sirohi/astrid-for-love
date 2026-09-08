@@ -81,13 +81,13 @@ test('conversation profile facts become authoritative before Astrid replies with
 });
 
 test('a protected profile conflict blocks eligibility until a deliberate UI edit resolves it', async t => {
-  const { app, repository } = await setup(t, async ctx => ({ ...empty(), profileUpdates: [{ field: 'age', value: '32', correction: false, evidenceIds: [ctx.messages.at(-1).id] }] }));
-  await app.profile('maya', { age: 31 });
-  await app.converse('maya', 'I am 32.');
+  const { app, repository } = await setup(t, async ctx => ({ ...empty(), profileUpdates: [{ field: 'age', value: '26', correction: false, evidenceIds: [ctx.messages.at(-1).id] }] }));
+  await app.profile('maya', { age: 25 });
+  await app.converse('maya', 'I am 26.');
   let state = await repository.read(); let maya = state.participants.find(person => person.id === 'maya'); const eli = state.participants.find(person => person.id === 'eli');
-  assert.equal(maya.age, 31); assert.equal(maya.profileConflicts[0].field, 'age');
+  assert.equal(maya.age, 25); assert.equal(maya.profileConflicts[0].field, 'age');
   assert.equal(eligibility(maya, eli), 'Profile facts need confirmation.');
-  await app.profile('maya', { age: 32 });
+  await app.profile('maya', { age: 26 });
   state = await repository.read(); maya = state.participants.find(person => person.id === 'maya');
-  assert.equal(maya.age, 32); assert.deepEqual(maya.profileConflicts, []); assert.equal(eligibility(maya, eli), null);
+  assert.equal(maya.age, 26); assert.deepEqual(maya.profileConflicts, []); assert.equal(eligibility(maya, eli), null);
 });

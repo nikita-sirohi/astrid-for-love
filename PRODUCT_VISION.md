@@ -184,3 +184,5 @@ A user recognizes themselves in Astrid's understanding, including difficult trut
 People may opt into profile browsing and ask Astrid for her take on someone who catches their eye. She can be enthusiastic, suggest exploring an ordinary uncertainty, or withhold an introduction. Discussing an uncertainty uses the participant’s own expectations and permission-safe information; another person’s private account is not an explanation to reveal. Attraction remains theirs to decide, and interest still requires double opt-in.
 
 The visual identity is a strange illustrated singles clubhouse: dead Cupid, fictional partygoers, wit, and a matchmaker with opinions. It should be eye-catching and playful without a therapy or corporate chatbot atmosphere.
+
+The notebook leads with an illustrated self-portrait and six compact editable understanding notes, with remaining notes expandable. Eligibility details stay in secondary matching settings. Potential connections are muted under the active chat; selecting one opens their portrait and Astrid’s assessment. The fictional demo cast uses distinct illustrated adults from one reusable image sheet.

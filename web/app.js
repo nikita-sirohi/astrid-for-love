@@ -2,10 +2,10 @@ const $ = (selector) => document.querySelector(selector);
 const el = (tag, className, text) => { const node = document.createElement(tag); if (className) node.className = className; if (text != null) node.textContent = text; return node; };
 const append = (node, ...children) => { node.append(...children.filter(Boolean)); return node; };
 const button = (label, className, action) => { const node = el('button', className, label); node.type = 'button'; node.addEventListener('click', action); return node; };
-let bootstrap, activeId, data, view = 'people', conversation = 'discover', panel = 'memory', sending = false, refreshing = false;
+let bootstrap, activeId, data, view = 'people', conversation = 'astrid', sending = false, refreshing = false;
 let chatSignature = '', knowledgeSignature = '', presenterSignature = '', toastTimer;
 const drafts = new Map();
-let discoverProfiles=[],discoverSignature='';
+let discoverProfiles=[],discoverSignature='',selectedPerson=null;
 const assessments=new Map(),adviceBusy=new Set();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
 const name = (id) => participant(id)?.name || id;
@@ -15,6 +15,7 @@ const profileFieldLabel = (id) => ({age:'Age',location:'Location',gender:'Gender
 const profileValue = (value) => Array.isArray(value) ? value.join(', ') : String(value ?? 'Not yet shared');
 function avatar(person, className = '') {
   if (!person || person.id === 'astrid') {const image=el('img',`avatar astrid-avatar ${className}`);image.src='/assets/portraits/astrid-illustrated.png';image.alt='Astrid';return image;}
+  if(person.photo?.endsWith('cast-illustrated.png')) { const image=el('span',`avatar cast-portrait ${className}`);image.setAttribute('role','img');image.setAttribute('aria-label',person.name);image.style.backgroundImage=`url(${person.photo})`;image.style.backgroundPosition=person.photoPosition;return image; }
   const image = el('img', `avatar ${className}`); image.src = person.photo || ''; image.alt = person.name; image.style.objectPosition = person.photoPosition || 'center';
   image.addEventListener('error', () => image.replaceWith(el('span', `avatar ${className}`, person.name?.slice(0, 1) || '?')), {once:true});
   return image;
@@ -34,30 +35,24 @@ async function mutate(path, method, body, success) {
 function draftKey() { return `${activeId}/${conversation}`; }
 function saveDraft() { if(activeId) drafts.set(draftKey(), $('#message-input').value); }
 function resetSignatures() { chatSignature = ''; knowledgeSignature = ''; }
-function selectConversation(id) { saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); if(id==='discover')refresh(true); }
+function selectConversation(id) { $('#person-dialog').close(); saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); if(id==='discover')refresh(true); }
 function renderNav() {
   const nav = $('#conversation-nav');
   const item = (id, person, title, subtitle) => append(button('',`conversation-button ${conversation === id ? 'active' : ''}`,() => selectConversation(id)),avatar(person),append(el('span'),el('strong','',title),el('small','',subtitle)));
-  const meet=append(button('',`conversation-button ${conversation==='discover'?'active':''}`,()=>selectConversation('discover')),el('span','browse-icon','✷'),append(el('span'),el('strong','','Meet people'),el('small','','The plot thickens')));
-  nav.replaceChildren(meet,item('astrid',null,'With Astrid','Ask the matchmaker'), el('p','section-label','Your connections'));
+  nav.replaceChildren(item('astrid',null,'With Astrid','Ask the matchmaker'), el('p','section-label','Your connections'));
   for(const chat of data.chats) nav.append(item(chat.id,chat.other,chat.other.name.split(' ')[0],'Just the two of you'));
   if(!data.chats.length) nav.append(el('p','nav-empty','A cast of two. Coming soon.'));
   const pending = data.proposals.filter(p => p.status === 'pending').length;
   if(pending) nav.append(item('proposals',{id:'astrid'},'A little spark',`${pending} introduction${pending === 1 ? '' : 's'} to consider`));
 }
 function renderDiscover() {
-  const signature=JSON.stringify([discoverProfiles,[...assessments],[...adviceBusy],data.proposals,data.participant.revision]);
+  const signature=JSON.stringify([selectedPerson,discoverProfiles,[...assessments],[...adviceBusy],data.proposals,data.participant.revision]);
   if(signature===discoverSignature)return;discoverSignature=signature;
   const target=$('#discover-panel');target.replaceChildren();
-  const hero=el('header','clubhouse-hero');
-  const art=el('img','clubhouse-art');art.src='/assets/clubhouse/cupid-retired.png';art.alt='A retired Cupid and a strange little cast of matchmaking characters.';
-  const intro=el('div','clubhouse-intro');intro.append(el('span','clubhouse-kicker','WELCOME TO THE ANTI-SWIPE CLUB'),el('h1','','Cupid’s dead.\nYou’re not.'),el('p','','Interesting people. Questionable timing. A matchmaker with opinions.'));
-  hero.append(art,intro,el('span','hero-stamp','LOVE IS\nA WEIRD\nTHING.'));target.append(hero);
-  const heading=el('div','discover-heading');heading.append(append(el('div'),el('span','eyebrow','THE PEOPLE DEPARTMENT'),el('h2','','Someone worth the trouble.')),el('p','','See a face you like? Ask Astrid for the plot.'));target.append(heading);
   const grid=el('div','discover-grid');
-  for(const person of discoverProfiles) {
+  for(const person of discoverProfiles.filter(p=>p.id===selectedPerson)) {
     const card=el('article','person-card');card.dataset.personId=person.id;
-    const portrait=el('div','person-portrait');const photo=el('img');photo.src=person.photo||'';photo.alt=person.name;photo.style.objectPosition=person.photoPosition||'center';portrait.append(photo,el('span','person-sticker','ACTUAL\nCHARACTER'));card.append(portrait);
+    const portrait=el('div','person-portrait');const photo=el('img');photo.src=person.photo||'';photo.alt=person.name;photo.style.objectPosition=person.photoPosition||'center';portrait.append(avatar(person,'profile-art'));card.append(portrait);
     const body=el('div','person-copy');body.append(el('h3','',`${person.name}, ${person.age}`),el('p','person-location',[person.location,person.pronouns].filter(Boolean).join(' · ')),el('p','person-bio',person.bio));
     const interests=el('div','interest-notes');for(const interest of person.interests||[])interests.append(el('span','',interest));body.append(interests);
     const assessment=assessments.get(person.id),busy=adviceBusy.has(person.id);
@@ -82,7 +77,7 @@ function renderDiscover() {
     card.append(body);grid.append(card);
   }
   if(!discoverProfiles.length)grid.append(append(el('div','discover-empty'),el('h3','','The room’s a little quiet.'),el('p','','Astrid is keeping an eye out. In the meantime, give her a good story.'),button('Talk to Astrid ↗','button',()=>selectConversation('astrid'))));
-  target.append(grid,el('p','discover-footnote','A profile is an opening line. Astrid knows there’s more to the story.'));
+  target.replaceChildren(grid);
 }
 function renderHeading() {
   const h = $('#chat-heading'); const chat = data.chats.find(c => c.id === conversation);
@@ -110,7 +105,7 @@ function messageNode(message) {
 function proposalNode(proposal) {
   const other = proposal.other || participant(proposal.participantIds.find(id => id !== activeId));
   const card = el('article','proposal-card');
-  if(other?.photo) { const photo = el('img','proposal-photo'); photo.src = other.photo; photo.alt = `Portrait of ${other.name}`; photo.style.objectPosition = other.photoPosition || 'center'; card.append(append(el('div','proposal-image'),photo)); }
+  if(other?.photo) { const photo = el('img','proposal-photo'); photo.src = other.photo; photo.alt = `Portrait of ${other.name}`; photo.style.objectPosition = other.photoPosition || 'center'; card.append(append(el('div','proposal-image'),avatar(other,'profile-art'))); }
   const body = el('div','proposal-details'); body.append(el('span','eyebrow','A PERSON WORTH MEETING'),el('h2','',`${other?.name || 'Your connection'}${other?.age ? `, ${other.age}` : ''}`),el('p','location', [other?.location,other?.pronouns].filter(Boolean).join(' · ')),el('p','intro',proposal.introductions?.[activeId] || other?.bio || 'Astrid thinks you two might have something to talk about.'));
   if(other?.interests?.length) body.append(el('p','location',other.interests.join(' · ')));
   const mine = proposal.decisions?.[activeId];
@@ -152,45 +147,36 @@ function renderChat() {
     for(const message of messages.filter(message => !message.fixture)) content.append(messageNode(message));
     if(!chat) {
       for(const permission of data.permissions.filter(p=>p.status === 'pending')) content.append(permissionNode(permission));
-      for(const proposal of data.proposals.filter(p=>p.status === 'pending')) content.append(proposalNode(proposal));
+
     }
   }
   if(nearBottom || !oldScroll) content.scrollTop = content.scrollHeight; else content.scrollTop = oldScroll;
 }
 function renderKnowledge() {
-  const signature = JSON.stringify([panel,data.memories,data.coverage,data.coverageDetails,data.profileConflicts,data.clarifications,data.participant]); if(signature === knowledgeSignature) return; knowledgeSignature = signature;
-  const target = $('#knowledge'); target.replaceChildren(); $('#memory-tab').classList.toggle('selected',panel === 'memory'); $('#profile-tab').classList.toggle('selected',panel === 'profile');
-  const conflicts=data.participant.profileConflicts || data.profileConflicts || [];
-  if(conflicts.length) {
-    const notice=el('aside','profile-conflicts'); notice.append(el('h3','','Let’s clear something up.'),el('p','','Something you told Astrid differs from your profile. Please check which details are right before your next introduction.'));
-    for(const conflict of conflicts) {
-      if(typeof conflict==='string') {notice.append(el('p','',conflict));continue;}
-      notice.append(el('p','',`${profileFieldLabel(conflict.field)}: your profile says “${profileValue(data.participant[conflict.field])}”; Astrid heard “${profileValue(conflict.proposedValue)}”.`));
-      if(conflict.field && Object.hasOwn(data.participant,conflict.field)) notice.append(button('Keep my profile value','text-button',async()=>{try {await mutate(`/api/participants/${activeId}/profile`,'PATCH',{[conflict.field]:data.participant[conflict.field]},'Your profile choice is confirmed.');}catch{}}));
-    }
-    notice.append(button('Check your profile','button subtle small',profileDialog)); target.append(notice);
-  }
-  if(panel === 'profile') { renderProfile(target); return; }
-  for(const topic of bootstrap.topics) {
-    const group = el('section','memory-group'); group.append(append(el('div','topic-heading'),el('h3','',topic.label)));
-    const memories = data.memories.filter(m=>m.topic === topic.id && !m.deleted);
-    if(!memories.length) group.append(el('p','topic-empty','Room for a conversation.'));
-    for(const memory of memories) {
-      const card = el('article','memory-card'); const meta = el('div','memory-meta');
-      if(facetLabel(memory.facet)) card.append(el('h4','memory-facet',facetLabel(memory.facet)));
-      meta.append(el('span',`tag ${memory.status}`,memory.status === 'confirmed' ? 'Confirmed' : 'Astrid’s read'),el('span','tag',({requires:'Firm requirement',prefers:'Preference',accepts:'Open to',unknown:'Still exploring'})[memory.strength] || memory.strength),el('span','tag',memory.sharing === 'shareable' ? 'Shareable' : 'Private'));
-      card.append(meta,el('p','',memory.text),append(el('div','memory-actions'),button('Edit','text-button',()=>memoryDialog(memory)),button('Remove','text-button',()=>removeMemory(memory)),memory.sharing === 'private' ? button('Sharing permission','text-button',()=>permissionDialog(memory)) : null)); group.append(card);
-    }
-    target.append(group);
-  }
-  target.append(button('+ Add something Astrid should know','button subtle add-memory',()=>memoryDialog()));
+  const signature=JSON.stringify([data.memories,data.participant]);if(signature===knowledgeSignature)return;knowledgeSignature=signature;
+  const target=$('#knowledge');target.replaceChildren(avatar(data.participant,'notebook-photo'),el('h3','notebook-name',data.participant.name));
+  const memories=data.memories.filter(m=>!m.deleted).sort((a,b)=>(b.strength==='requires')-(a.strength==='requires'));
+  const list=el('ul','lore-list');
+  const add=(memory,parent)=>{
+    const row=el('li','lore-note');const words=memory.text.split(/\s+/);const brief=words.length>23?words.slice(0,23).join(' ')+'…':memory.text;const text=button(brief,'lore-text',()=>memoryDialog(memory));text.title='Edit this note';
+    if(memory.status!=='confirmed')row.append(el('span','lore-uncertain','Still getting this right · '));
+    row.append(text,button('×','remove-note',()=>removeMemory(memory)));parent.append(row);
+  };
+  memories.slice(0,6).forEach(m=>add(m,list));target.append(list);
+  if(memories.length>6){const more=el('details','more-lore');more.append(el('summary','',`A few more notes (${memories.length-6})`));const rest=el('ul','lore-list');memories.slice(6).forEach(m=>add(m,rest));more.append(rest);target.append(more);}
+  if(!memories.length)target.append(el('p','','A good story is a good place to start.'));
+  target.append(button('+ Add a note','text-button',()=>memoryDialog()));
+  const settings=el('details','more-lore');settings.append(el('summary','','Matching & sharing'),button('Preferences & visibility','text-button',profileDialog));target.append(settings);
 }
-function renderProfile(target) {
-  const p = data.participant; const card = el('div','profile-details'); if(p.photo) { const img = el('img'); img.src = p.photo; img.alt = p.name; img.style.objectPosition = p.photoPosition || 'center'; card.append(img); }
-  card.append(el('h3','',`${p.name}, ${p.age}`),el('p','',[p.location,p.pronouns].filter(Boolean).join(' · ')),el('p','',p.bio));
-  const dl = el('dl'); for(const [label,value] of [['Gender',p.gender || 'Not yet shared'],['Interested in dating',p.interestedIn?.join(', ') || 'Not yet shared'],['Age range',p.ageRange?.join('–') || 'Not yet shared'],['Introductions',p.matchingEnabled ? 'Open' : 'Paused'],['Profile visibility',p.discoverable ? 'Visible to people who could be a match' : 'Not listed']]) dl.append(el('dt','',label),el('dd','',value)); card.append(dl,button('Edit your profile','button subtle',profileDialog)); target.append(card);
+function renderPotentials() {
+ const target=$('#potential-people');target.replaceChildren(el('span','eyebrow','POSSIBLE PLOT TWISTS'));
+ const row=el('div','potential-row');
+ for(const person of discoverProfiles.filter(p=>!data.chats.some(c=>c.other.id===p.id))) {
+   const control=append(button('','potential-person',()=>{selectedPerson=person.id;discoverSignature='';renderDiscover();$('#person-dialog').showModal();if(!assessments.has(person.id))$('#discover-panel .ask-astrid')?.click();}),avatar(person),el('span','',person.name));row.append(control);
+ }
+ if(!row.children.length)row.append(el('p','fineprint','The next plot twist is still out there.'));target.append(row);
 }
-function render() { if(!data) return; $('#your-corner').textContent=`${data.participant.name.split(' ')[0]}’s clubhouse`; renderNav(); $('#discover-panel').hidden=conversation!=='discover';$('#chat-panel').hidden=conversation==='discover';if(conversation==='discover')renderDiscover();else{renderHeading();renderChat();}renderKnowledge(); }
+function render() { if(!data) return; $('#your-corner').textContent=`${data.participant.name.split(' ')[0]}’s clubhouse`;renderNav();renderHeading();renderChat();renderKnowledge();renderPotentials();if($('#person-dialog').open)renderDiscover(); }
 function field(label,type,value,options) {
   const wrap = el('label','field',label); const input = el(type === 'textarea' ? 'textarea' : type === 'select' ? 'select' : 'input');
   if(type === 'select') for(const [id,name] of options) { const option = el('option','',name); option.value = id; input.append(option); }
@@ -236,7 +222,7 @@ function declineDialog(proposal) {
 async function refresh(force = false) {
   if(refreshing && !force) return; refreshing=true; const actor=activeId;
   try { if(view === 'presenter') { const result=await api('/api/presenter'); if(view === 'presenter') renderPresenter(result); }
-    else { const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`),conversation==='discover'?api(`/api/participants/${actor}/discover`):Promise.resolve(null)]); if(actor===activeId && view==='people') { if(data && data.participant.revision!==result.participant.revision)assessments.clear();data=result;if(discovery)discoverProfiles=discovery.profiles||[];render(); } }
+    else { const [result,discovery]=await Promise.all([api(`/api/participants/${actor}`),api(`/api/participants/${actor}/discover`)]); if(actor===activeId && view==='people') { if(data && data.participant.revision!==result.participant.revision)assessments.clear();data=result;if(discovery)discoverProfiles=discovery.profiles||[];render(); } }
   } catch(error) { if(force) showError(error.message,()=>refresh(true)); } finally { refreshing=false; }
 }
 async function startMatching() { const b=$('#review-matches'); b.disabled=true; try { await mutate(`/api/participants/${activeId}/matching`,'POST',{},'Astrid is taking a look. You can keep chatting.'); } catch {} finally { b.disabled=false; } }
@@ -274,8 +260,8 @@ $('#message-input').addEventListener('input',saveDraft);
 $('#message-input').addEventListener('keydown',event=>{ if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing) { event.preventDefault(); $('#composer').requestSubmit(); } });
 $('#review-matches').addEventListener('click',startMatching);
 $('#notebook-matching').addEventListener('click',startMatching);
-$('#memory-tab').addEventListener('click',()=>{ panel='memory'; renderKnowledge(); });
-$('#profile-tab').addEventListener('click',()=>{ panel='profile'; renderKnowledge(); });
+$('#person-close').addEventListener('click',()=>$('#person-dialog').close());
+
 function toggleNotebook(open) { $('#notebook').hidden=!open;$('#notebook-toggle').setAttribute('aria-expanded',String(open)); }
 $('#notebook-toggle').addEventListener('click',()=>toggleNotebook($('#notebook').hidden));
 $('#notebook-close').addEventListener('click',()=>toggleNotebook(false));

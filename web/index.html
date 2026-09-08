@@ -19,19 +19,21 @@
       <div id="conversation-nav"></div>
       <div class="sidebar-bottom"><div class="little-note"><span class="club-stamp">NO BORING<br>LOVE STORIES</span><p>Come for the face.<br>Stay for the <em>plot.</em></p></div><button id="review-matches" class="button subtle">Find me a plot twist <span aria-hidden="true">↗</span></button><p class="fineprint">Only when you both say yes.</p></div>
     </aside>
-    <section id="discover-panel" class="discover-panel" aria-label="Meet people"></section>
-    <section id="chat-panel" class="chat-panel" hidden>
-      <header id="chat-heading" class="chat-heading"></header>
+
+    <section id="chat-panel" class="chat-panel">
+      <div class="chat-club-banner"><strong>Cupid’s dead. You’re not.</strong></div><header id="chat-heading" class="chat-heading"></header>
       <div id="chat-content" class="chat-content" aria-live="polite"></div>
       <div id="typing" class="typing" hidden><img src="/assets/portraits/astrid-illustrated.png" alt=""> Astrid is thinking<span class="dots">…</span></div>
       <form id="composer" class="composer"><div class="composer-input"><label class="sr-only" for="message-input">Your message</label><textarea id="message-input" rows="1" placeholder="Tell me what’s on your mind…" maxlength="12000"></textarea><button type="submit" id="send" aria-label="Send message">↑</button></div><p id="composer-note">Just between you and Astrid.</p></form>
+      <section id="potential-people" class="potential-people" aria-label="Potential connections"></section>
     </section>
   </main>
   <aside id="notebook" class="understanding" hidden aria-label="Your notebook">
-    <div class="understanding-header"><button id="notebook-close" class="close-notebook" aria-label="Close notebook">×</button><span class="notebook-kicker">a work in progress, like all good characters</span><h2>Your <em>lore.</em></h2><p>The facts, the footnotes, the dealbreakers.<br>You get the final edit.</p></div>
-    <div class="panel-tabs"><button id="memory-tab" class="selected">What I know</button><button id="profile-tab">Your profile</button></div><div id="knowledge"></div><button id="notebook-matching" class="button subtle notebook-matching">Find me a plot twist ↗</button>
+    <div class="understanding-header"><button id="notebook-close" class="close-notebook" aria-label="Close notebook">×</button><span class="notebook-kicker">a work in progress, like all good characters</span><h2>Your <em>lore.</em></h2><p>What Astrid knows. Tap a note to set her straight.</p></div>
+    <div id="knowledge"></div><button id="notebook-matching" class="button subtle notebook-matching">Find me a plot twist ↗</button>
   </aside>
   <main id="presenter" class="presenter" hidden></main>
+  <dialog id="person-dialog" class="person-dialog"><button id="person-close" class="close-person" aria-label="Close profile">×</button><section id="discover-panel" class="discover-panel" aria-label="Profile and Astrid’s assessment"></section></dialog>
   <dialog id="editor"><form id="editor-form"></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>
   <script type="module" src="/app.js"></script>
