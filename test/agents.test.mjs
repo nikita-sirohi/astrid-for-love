@@ -9,7 +9,7 @@ const message = { id: 'msg-1', chatId: 'astrid-a', authorId: 'a', role: 'user', 
 const memory = { id: 'mem-1', participantId: 'a', topic: 'dating', facet: 'dating.intent', text: 'Wants a long-term relationship.', status: 'confirmed', strength: 'prefers', evidenceIds: ['msg-1'] };
 const input = { participant: person, memories: [memory], messages: [message], clarifications: [] };
 const output = () => ({ reply: 'What would you want to make room for together?', permissions: [] });
-const understanding = () => ({ memories: [], profileUpdates: [], clarificationUpdates: [], gaps: [] });
+const understanding = () => ({ memories: [], stories: [], profileUpdates: [], clarificationUpdates: [], gaps: [] });
 const adapter = (data, inspect = () => {}) => createAgents({ mode: 'live', config: { key: 'test-key', model: 'gpt-6-astra' }, client: async request => { inspect(request); return { data, model: 'gpt-6-astra', id: 'test-response' }; } });
 
 test('application prompt keeps role examples, replaces laboratory limitations, and records assets', async () => {
@@ -18,7 +18,7 @@ test('application prompt keeps role examples, replaces laboratory limitations, a
   assert.doesNotMatch(prompt.instructions, /local prompt laboratory|No application tools are available/);
   assert.match(prompt.instructions, /one bounded application task/);
   assert.equal(prompt.hash.length, 64);
-  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.5.0.md');
+  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.6.0.md');
 });
 
 test('converse whitelists own context and strips private matching rationale from clarifications', async () => {
@@ -115,12 +115,12 @@ test('offline family conversation records evidence and answers own queued work o
 
 test('Memy has a standalone versioned prompt and only receives own authorized understanding', async () => {
   const prompt = await applicationPrompt('memy');
-  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.2.0.md']);
+  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.3.0.md']);
   assert.match(prompt.instructions, /before Astrid's reply/);
   const result = await adapter(understanding(), request => {
     const { context } = JSON.parse(request.input[0].content);
     assert.equal(request.task, 'understand');
-    assert.deepEqual(Object.keys(request.schema.properties), ['memories', 'profileUpdates', 'clarificationUpdates', 'gaps']);
+    assert.deepEqual(Object.keys(request.schema.properties), ['memories', 'stories', 'profileUpdates', 'clarificationUpdates', 'gaps']);
     assert.equal(context.memories.length, 1);
     assert.equal(context.messages.length, 1);
     assert.equal(context.clarifications.length, 0);
@@ -131,7 +131,7 @@ test('Memy has a standalone versioned prompt and only receives own authorized un
     messages: [...input.messages, { ...message, chatId: 'astrid-b', authorId: 'b', text: 'OTHER SECRET' }],
     clarifications: [{ id: 'q', participantId: 'b', topic: 'family', facet: 'family.household', status: 'queued', reason: 'OTHER SECRET' }] });
   assert.equal(result.metadata.prompt.role, 'memy');
-  assert.equal(result.metadata.prompt.version, '0.2.0');
+  assert.equal(result.metadata.prompt.version, '0.3.0');
 });
 
 test('Astrid receives compact gap briefing but cannot produce understanding mutations', async () => {

@@ -70,3 +70,16 @@ Profile `discoverable` is an explicit editable boolean. `GET /api/participants/:
 Reviews carry `exploration: allow|hold`. Explore requires full baseline coverage, evidence from both people, and no firm conflict. Advice uses a separate agent `advise` task with authorized context only. Reviews, advice, and clarification records persist in the file repository. Interest rejects stale revisions, withheld decisions, hidden profiles, and prior declines; it records only the requesting person’s acceptance and uses the existing double-consent transition.
 
 Browsing profiles now include `matchStatus`, derived only from a current-revision review or `unknown`; ordering uses disposition without a probability score. Live character shells explicitly marked `demoShell` can be previewed while basic eligibility is unknown, but cannot be introduced until ordinary eligibility and readiness pass. This is restricted to fictional local shells. `POST /api/participants/:id/discover/:otherId/discuss` with `{reviewId}` requires current advice and writes its safe explanation to the actor’s private chat, idempotently by advice ID. It never writes user evidence or understanding. Runtime v0.5.0 retains missing-own-evidence facets as legitimate discussion questions.
+
+## Story memory
+
+`understand` also returns `stories: [{id: string|null, storyType: "passion"|"anecdote"|"humor", text, status: "confirmed"|"tentative", evidenceIds: string[]}]` (at most six). Fresh latest-user evidence is required in addition to any cited prior own user messages. Stories persist atomically before Astrid replies in the existing memory API with `kind: "story"`, `topic: "story"`, `facet: null`, and `strength: "unknown"`; absent kind identifies existing compatibility records. No store migration is necessary.
+
+Story IDs support the same private listing, revision history, edit/delete locks, text-free tombstones and exact-recipient versioned permission grants as beliefs. A story cannot change into a compatibility belief through editing. Astrid receives own stories as memories; introduction context receives only already-authorized records. Matchy context and readiness exclude story records. Lore displays them as compact editable notes. Broad shareable status remains an explicit user setting, never model output.
+
+
+## Pending understanding and sharing precedence
+
+Participant `understandingPending` is persisted before Memy runs and cleared with successful understanding commit. Proposal publication and acceptance reject pending participants, including after extraction failure. `matchingDeferred` requeues a review skipped during extraction. Only newly added private stories may advance pending proposal revisions without discarding acceptances; other updates use existing invalidation.
+
+A current-recipient/current-memory-revision denied permission wins over `sharing: shareable`. Automatic memory revisions reset sharing to private. Introduction contexts preserve status. The story editor exposes explicit tentative/confirmed status and supports new story creation through the existing memory POST endpoint.

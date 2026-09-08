@@ -51,6 +51,8 @@ Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 remov
 
 ## Current application contracts
 
-Astrid v0.8.0, Memy v0.2.0, Matchy v0.6.0, runtime v0.5.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
+Astrid v0.8.0, Memy v0.3.0, Matchy v0.6.0, runtime v0.6.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
 
 Matchy v0.6.0 distinguishes ordinary uncertainty that permits exploration from firm conflicts and incomplete baselines that hold introductions. Runtime v0.4.0 adds Astrid’s participant-safe browsing advice task; it receives public profile information, authorized stories, and recipient-owned discussion topics, never the private pair rationale.
+
+Memy v0.3.0 adds a separate evidence-backed stories output for passions, anecdotes, and humor. Story records remain private and independent of readiness. Runtime v0.6.0 lets Astrid use own stories naturally and only authorized stories in introductions. Existing role examples remain unchanged.

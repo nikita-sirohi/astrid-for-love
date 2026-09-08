@@ -95,7 +95,7 @@ Five offline tests cover stream fragmentation, incomplete results, safe errors, 
 
 Implemented. The HTTP API and JsonFileRepository isolate the browser and agents from file layout. Application routes enforce participant ownership, consent, revisions, and chat membership. This is a replaceable persistence boundary, not a production database service. Each participant has a fixed local port and profiles remain editable; there is no login.
 
-Readiness requires confirmed, non-unknown understanding in seven topics. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
+Readiness currently requires a confirmed record in each of 16 facets across seven topics, with no tentative record in that facet. Requirement strength is independent: a confirmed undecided position may be recorded as unknown strength. This mechanical check does not prove the substance of a facet is understood; Matchy must still evaluate consequential uncertainty. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
 
 Matchy receives pair-scoped memory. Private Astrid context receives only that person's memory and facet-scoped clarification needs; free-form pair rationale is kept out. Introductions receive public profiles and appropriately authorized details. The shared opening and departure are persisted together after double acceptance. Later connection messages do not go to an agent. Check-ins are private and manually requested; full post-date learning is deferred.
 
@@ -140,3 +140,20 @@ The participant experience has no identity switcher, model/storage badges, demo 
 The active conversation is the landing view; muted potential connections appear under the active conversations in the sidebar. Only opted-in, discoverable, mutually eligible profiles enter the browse pool. Matchy reviews current understanding on demand, returning a decision plus explicit exploration allow/hold. Complete baseline understanding remains mandatory; a firm conflict or prior decline cannot be overridden by interest. Astrid receives a separate participant-safe advice context: own understanding, public counterpart profile, specifically permitted counterpart stories, and own discussion facets. Private pair rationale never enters this context.
 
 Advice and interest bind to reviewed participant revisions. Interest records one acceptance; the existing proposal lifecycle requires the other acceptance before creating a chat. File-store transactions persist advice, reviews, clarifications, and consent. The interface uses an absurd illustrated clubhouse and keeps internal agent names and operator status out of participant copy.
+
+## Personality without readiness inflation
+
+Memy records distinctive passions, actual anecdotes, and humor separately from compatibility beliefs. These story records use the existing transactional FileMemoryStore and memory controls, distinguished by `kind: story` and no relationship facet. They enrich Astrid's own conversational recall and permission-authorized introduction material, but cannot satisfy baseline readiness or serve as Matchy's compatibility evidence. Current names, photos, bios and interests are not automatically rewritten from stories. No invented biography is used to fill empty profiles.
+
+Stories require latest-user evidence; recording a possible introduction hook never authorizes disclosure. User edits revoke prior grants and protect records, and deletion removes active context while preserving owner history. Semantically detecting a paraphrase of a locked or deleted story remains a model responsibility, as it is for beliefs; application enforcement protects IDs, evidence scope and context cutoffs.
+
+
+## Foundation review decisions
+
+Persist `understandingPending` with a new private user message, clear it only after Memy changes commit, and block proposal publication/acceptance while either participant has unresolved extraction. Failed extraction remains recoverable through a subsequent private turn. Reviews encountering pending understanding defer matching until it finishes.
+
+Maintain current pending proposal acceptances when a turn only adds new private stories; advance their participant revision alongside the context revision, since no compatibility or previously disclosed content changed. Other memory mutations retain conservative invalidation. This is a narrow exception, not a full split of context, compatibility and disclosure versions.
+
+A current-version recipient-specific denial overrides broad shareable status. Model revisions reset general sharing to private; exact-recipient grants remain tied to the prior record revision. Background introductions retain the uncertainty of all authorized memory material. Story edits preserve tentative status unless the owner explicitly confirms it.
+
+Remaining intentional demo limits: readiness is a structural gate over 16 facets rather than a semantic proof; matching order uses disposition buckets, not relative likelihood; clarification questions use fixed recipient-safe facet definitions; the shared-chat opening remains templated; check-ins and retries are manual; full-state local transactions and recent-message windows are not a scalable retrieval system. These do not prevent conversation and personality iteration, but should not be presented as completed production capabilities.

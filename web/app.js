@@ -165,7 +165,7 @@ function renderKnowledge() {
   memories.slice(0,6).forEach(m=>add(m,list));target.append(list);
   if(memories.length>6){const more=el('details','more-lore');more.append(el('summary','',`A few more notes (${memories.length-6})`));const rest=el('ul','lore-list');memories.slice(6).forEach(m=>add(m,rest));more.append(rest);target.append(more);}
   if(!memories.length)target.append(el('p','','A good story is a good place to start.'));
-  target.append(button('+ Add a note','text-button',()=>memoryDialog()));
+  target.append(button('+ Add a note','text-button',()=>memoryDialog()),el('span','',' · '),button('+ Add a story','text-button',()=>memoryDialog({kind:'story',storyType:'anecdote',status:'confirmed'})));
   const settings=el('details','more-lore');settings.append(el('summary','','Matching & sharing'),button('Preferences & visibility','text-button',profileDialog));target.append(settings);
 }
 function renderPotentials() {
@@ -190,6 +190,13 @@ function dialog(title,description,fields,saveLabel,onSave) {
   form.onsubmit = async e => { e.preventDefault(); submit.disabled = true; try { await onSave(); dialog.close(); } catch {} finally { submit.disabled = false; } }; dialog.showModal();
 }
 function memoryDialog(memory) {
+  if(memory?.kind==='story') {
+    const text=field('What should Astrid remember?','textarea',memory.text||'');text.input.required=true;
+    const status=field('How certain is this?','select',memory.status||'confirmed',[['confirmed','That is accurate'],['tentative','Still getting this right']]);
+    const sharing=field('Sharing','select',memory.sharing||'private',[['private','Keep private'],['shareable','Astrid may use this in introductions']]);
+    dialog('Let’s get your story right.','Your story adds personality; it does not establish relationship compatibility.',[text,status,sharing],'Save note',()=>mutate(`/api/participants/${activeId}/memories${memory.id?'/'+memory.id:''}`,memory.id?'PATCH':'POST',{kind:'story',storyType:memory.storyType||'anecdote',topic:'story',facet:null,text:text.input.value.trim(),status:status.input.value,sharing:sharing.input.value},'Story updated.'));return;
+  }
+
   const topic = field('Area','select',memory?.topic || bootstrap.topics[0].id,bootstrap.topics.map(t=>[t.id,t.label]));
   const facet=field('What part of this?','select','',[]);
   const updateFacets=()=>{ facet.input.replaceChildren(); const choices=(bootstrap.facets||[]).filter(f=>f.topic===topic.input.value); for(const f of choices) {const option=el('option','',f.label);option.value=f.id;facet.input.append(option);} if(choices.some(f=>f.id===memory?.facet)) facet.input.value=memory.facet; facet.wrap.hidden=!choices.length; };

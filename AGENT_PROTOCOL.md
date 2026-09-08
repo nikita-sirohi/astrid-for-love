@@ -95,3 +95,7 @@ See [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the implemented lifecycle. A 
 ## Implemented Memy handoff
 
 The current app adds Memy v0.2.0 before Astrid v0.8.0. `understand(ownContext)` returns atomic memory suggestions with user evidence IDs, explicit profile updates, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. Matchy handoffs carry the exact facet and recipient-owned evidence IDs; the application derives safe uncertainty/completion text from shared definitions and includes evidence revisions. No free-form private pair assessment enters Astrid’s context. Memy’s answered disposition needs latest-user evidence for that facet, not simply another fact in the same broad topic.
+
+## Personality handoff
+
+Memy v0.3.0 adds separate story suggestions, each supported by fresh own user evidence. The application stores them before Astrid replies as private `kind: story` memories with no compatibility facet. Astrid can request a versioned exact-recipient grant for a story ID using the existing permission handoff. Only authorized story content enters an introduction; a promising private matching rationale does not authorize disclosure. Stories are excluded from readiness, matching evidence, and clarification completion.

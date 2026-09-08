@@ -20,7 +20,7 @@ const definitions = [
 export const facets=definitions.map(([id,topic,label,question,completionCondition])=>({id,topic,label,question,completionCondition}));
 export const facetFor=id=>facets.find(f=>f.id===id);
 export function coverageDetails(state,id) {
- const records=state.memories.filter(m=>m.participantId===id&&!m.deleted);
+ const records=state.memories.filter(m=>m.participantId===id&&!m.deleted&&m.kind!=='story');
  return Object.fromEntries(facets.map(f=>[f.id,records.some(m=>m.facet===f.id&&m.status==='confirmed')&&!records.some(m=>m.facet===f.id&&m.status==='tentative')]));
 }
 export function safeClarification(item) {

@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
+import { storyTypes } from './memory-store.mjs';
 import { facets } from './understanding.mjs';
 import { configuration, promptFor, selectedVersions } from './runtime.mjs';
 
@@ -17,6 +18,7 @@ const schemas = {
   converse: object({ reply: string, permissions: array(object({ memoryId: string, recipientId: string })) }),
   understand: object({ memories: array(object({ id: { type: ['string', 'null'] }, topic, facet, text: string,
       status: enumeration(['confirmed', 'tentative']), strength: enumeration(['requires', 'prefers', 'accepts', 'unknown']), evidenceIds: array(string) })),
+    stories: array(object({ id: { type: ['string','null'] }, storyType: enumeration(storyTypes), text: string, status: enumeration(['confirmed','tentative']), evidenceIds: array(string) }), 6),
     profileUpdates: array(object({ field: enumeration(profileFields), value: string, correction: { type: 'boolean' }, evidenceIds: array(string) }), 6),
     clarificationUpdates: array(object({ id: string, status: enumeration(['answered', 'deferred', 'declined', 'obsolete']), evidenceIds: array(string) })),
     gaps: array(object({ topic, reason: { type: 'string', minLength: 1, maxLength: 600 } }), 2) }),
@@ -39,7 +41,7 @@ function validate(value, schema) {
     && (!schema.minLength || value.trim().length >= schema.minLength) && (!schema.maxLength || value.length <= schema.maxLength);
 }
 
-export async function applicationPrompt(role, version = role === 'memy' ? '0.2.0' : selectedVersions[role]) {
+export async function applicationPrompt(role, version = role === 'memy' ? '0.3.0' : selectedVersions[role]) {
   if (role === 'memy') {
     if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid Memy prompt version.');
     const file = `memy/v${version}.md`;
@@ -52,9 +54,9 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.2.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.5.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.6.0.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.5.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.6.0.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -83,7 +85,7 @@ export async function structuredResponse({ key, model, instructions, input, sche
 const publicProfile = value => pick(value, ['id', 'name', 'age', 'gender', 'pronouns', 'location', 'bio', 'photo', 'interests']);
 const ownProfile = value => ({ ...publicProfile(value), ...pick(value, ['interestedIn', 'matchingEnabled', 'revision', 'ageRange', 'profileFieldLocks']),
   profileConflicts: (value.profileConflicts || []).map(item => pick(item, ['field', 'proposedValue', 'evidenceIds'])) });
-const cleanMemory = value => pick(value, ['id', 'participantId', 'topic', 'facet', 'text', 'status', 'strength', 'sharing', 'evidenceIds', 'revision', 'userLocked', 'locked']);
+const cleanMemory = value => pick(value, ['id', 'participantId', 'kind', 'storyType', 'topic', 'facet', 'text', 'status', 'strength', 'sharing', 'evidenceIds', 'revision', 'userLocked', 'locked']);
 const ownMemories = (memories, id) => memories.filter(memory => memory.participantId === id && !memory.deleted).map(cleanMemory);
 const ownMessages = (messages, id) => messages.filter(message => message.chatId === `astrid-${id}`
   && (message.authorId === id || message.authorId === 'astrid' || message.authorId === 'system'))
@@ -93,7 +95,7 @@ function contextFor(task, args) {
   if (task === 'review') {
     if (args.participants.length !== 2) throw new Error('Matching requires exactly two participants.');
     const ids = args.participants.map(person => person.id);
-    return { facets, participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted).map(cleanMemory),
+    return { facets, participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted && memory.kind !== 'story').map(cleanMemory),
       previousReviews: (args.previousReviews || []).map(review => pick(review, ['decision', 'reason', 'evidenceIds', 'clarifications', 'revisions'])) };
   }
   if (task === 'advise') {
@@ -115,7 +117,7 @@ function contextFor(task, args) {
   const context = { participant: ownProfile(args.participant), memories: ownMemories(args.memories || [], args.participant.id),
     messages: ownMessages(args.messages || [], args.participant.id) };
   if (task === 'checkin') return { ...context, other: publicProfile(args.other) };
-  const privateContext = { ...context, facets, memoryTombstones: (args.memoryTombstones || []).map(item => pick(item, ['id', 'topic', 'facet'])), clarifications: (args.clarifications || []).filter(item => item.participantId === args.participant.id)
+  const privateContext = { ...context, facets, memoryTombstones: (args.memoryTombstones || []).map(item => pick(item, ['id', 'kind', 'storyType', 'topic', 'facet'])), clarifications: (args.clarifications || []).filter(item => item.participantId === args.participant.id)
     .map(item => {
       const def = facets.find(facet => facet.id === item.facet);
       if (!def || def.topic !== item.topic) return null;
@@ -156,6 +158,12 @@ function validateReferences(task, data, context) {
     if (memory.id && context.memoryTombstones.some(item => item.id === memory.id)) fail();
     if (memory.id && !context.memories.some(existing => existing.id === memory.id && existing.topic === memory.topic && existing.facet === memory.facet && !existing.userLocked && !existing.locked)) fail();
     if (memory.id === null) delete memory.id;
+  }
+  for (const story of data.stories) {
+    if (!story.evidenceIds.length || story.evidenceIds.some(id => !userEvidence.has(id)) || !story.evidenceIds.includes(latestUser?.id)) fail();
+    if (story.id && context.memoryTombstones.some(item => item.id === story.id)) fail();
+    if (story.id && !context.memories.some(existing => existing.id === story.id && existing.kind === 'story' && !existing.userLocked && !existing.locked)) fail();
+    if (story.id === null) delete story.id;
   }
   for (const update of data.profileUpdates) {
     if (!latestEvidence(update.evidenceIds)) fail();
@@ -229,13 +237,13 @@ function scripted(task, context) {
     if (clear && result.memories.some(memory => memory.facet === clarification?.facet)) result.clarificationUpdates.push({ id: clarification.id, status: 'answered', evidenceIds: [latest.id] });
     result.reply = clear ? 'Separate space and professional care make the expectation much clearer. What would you want to understand about a partner’s own family obligations?' : 'What would your partner be agreeing to: sharing a home, helping with care, or both? And what would you make room for if the roles were reversed?';
   } else result.reply = questions[target];
-  if (task === 'understand') return { memories: result.memories, profileUpdates: [], clarificationUpdates: result.clarificationUpdates, gaps: [] };
+  if (task === 'understand') return { memories: result.memories, stories: [], profileUpdates: [], clarificationUpdates: result.clarificationUpdates, gaps: [] };
   return { reply: result.reply, permissions: [] };
 }
 
 export function createAgents({ mode = 'live', client = structuredResponse, config, versions = selectedVersions, timeoutMs = 120000 } = {}) {
   if (!['live', 'offline'].includes(mode)) throw new Error('Unknown agent mode.');
-  const promptVersions = { ...selectedVersions, memy: '0.2.0', ...versions };
+  const promptVersions = { ...selectedVersions, memy: '0.3.0', ...versions };
   async function run(task, args) {
     const context = contextFor(task, args);
     const role = task === 'review' ? 'matchy' : task === 'understand' ? 'memy' : 'astrid';
@@ -253,7 +261,7 @@ export function createAgents({ mode = 'live', client = structuredResponse, confi
       }
     }
     // Offline suggestions omit optional IDs; the wire format uses nullable required IDs.
-    if (task === 'understand') for (const memory of result.data?.memories || []) memory.id ??= null;
+    if (task === 'understand') for (const memory of [...(result.data?.memories || []), ...(result.data?.stories || [])]) memory.id ??= null;
     if (!validate(result.data, schemas[task])) throw new Error('Invalid agent response.');
     validateReferences(task, result.data, context);
     return { ...result.data, metadata: { mode, model: result.model || config?.model || 'gpt-6-astra',
