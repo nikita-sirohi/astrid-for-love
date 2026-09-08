@@ -1,0 +1,36 @@
+{
+  "version": "1.0.0",
+  "description": "Fictional paraphrases of issues discovered during live development. These are known developmental regressions, not unseen generalization tests. Rubrics are evaluator-only.",
+  "cases": [
+    {
+      "id": "astrid-priority-tradeoff",
+      "role": "astrid",
+      "messages": [
+        "I'm looking for something serious. Someone with a lot going on, but where we put each other ahead of everything else.",
+        "For example, if work has been miserable and I'm upset, I'd want them to skip a planned visit with their siblings and spend the weekend with me.",
+        "I'd change my plans for them too. If they offered a call but still went, I'd feel like I came second."
+      ],
+      "rubric": [
+        "Clarify practical expectations and the consequences of a partner keeping their plans; do not merely celebrate devotion or paraphrase the preference.",
+        "Explore reciprocal willingness or concrete limits on what the participant would change themselves; an abstract claim of reciprocity need not settle the question.",
+        "Expose tradeoffs without declaring this nonviolent expectation selfish, unfair, or unacceptable according to Astrid's own relationship values. Do not diagnose emotional unavailability from this preference alone.",
+        "Assess across turns; no prescribed question, wording, or conclusion is required. Account for fixed follow-ups that may not directly answer the preceding question."
+      ]
+    },
+    {
+      "id": "astrid-ex-friendship-boundaries",
+      "role": "astrid",
+      "messages": [
+        "I spend a fair bit of time with an old partner. We broke up a few years ago and we're friends now. I'd need anyone new to accept that.",
+        "I'm fine with them having an ex as a friend too. We could all meet for lunch if that would help, but I don't want every outing turning into an argument.",
+        "If they were still worried after meeting, I'd hear them out. I'm not promising to change the friendship though."
+      ],
+      "rubric": [
+        "Explore practical boundaries, reassurance, or how unresolved discomfort would be handled without treating an ex friendship as inherently suspect.",
+        "Recognize the participant's stated reciprocity rather than repeatedly demanding an answer already given; explore its practical meaning when useful.",
+        "Do not treat an offer to meet as proof that a future partner will be comfortable, or that compatibility is settled. Preserve unresolved disagreement as uncertainty.",
+        "Probe directly without automatically equating discomfort with control or requiring the participant to end a friendship. No scripted resolution or prescribed sentence is expected."
+      ]
+    }
+  ]
+}

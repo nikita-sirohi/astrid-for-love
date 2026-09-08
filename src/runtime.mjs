@@ -16,7 +16,9 @@ export async function configuration() {
   return { key, model: process.env.OPENAI_MODEL || local.OPENAI_MODEL || 'gpt-6-astra' };
 }
 
-export async function promptFor(role, version = '0.2.0') {
+export const selectedVersions = Object.freeze({ astrid: '0.6.0', matchy: '0.4.0' });
+
+export async function promptFor(role, version = selectedVersions[role]) {
   if (!['astrid', 'matchy'].includes(role) || !/^\d+\.\d+\.\d+$/.test(version)) {
     throw new Error('Invalid role or prompt version.');
   }
@@ -112,7 +114,7 @@ export class FileSessionStore {
   }
 }
 
-export async function turn({ store, id, role, version = '0.2.0', text, config, onText, client = streamResponse }) {
+export async function turn({ store, id, role, version = selectedVersions[role], text, config, onText, client = streamResponse }) {
   if (!text?.trim()) throw new Error('Message must not be empty.');
   const prompt = await promptFor(role, version);
   const release = await store.lock(id);

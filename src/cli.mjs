@@ -5,7 +5,7 @@ import { configuration, FileSessionStore, turn } from './runtime.mjs';
 
 const { values } = parseArgs({ options: {
   role: { type: 'string', default: 'astrid' }, session: { type: 'string' },
-  version: { type: 'string', default: '0.2.0' }, message: { type: 'string' },
+  version: { type: 'string' }, message: { type: 'string' },
   file: { type: 'string' }, help: { type: 'boolean' },
 } });
 if (values.help) {

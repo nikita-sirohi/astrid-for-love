@@ -4,10 +4,10 @@ These are initial behavioral prompt drafts, not executable agents. Product inten
 
 | Role | Selected draft | Purpose |
 | --- | --- | --- |
-| Astrid | [v0.2.0](astrid/v0.2.0.md) | Conversation, understanding, and participant-facing matchmaking |
-| Matchy | [v0.2.0](matchy/v0.2.0.md) | Private background compatibility reviews |
+| Astrid | [v0.6.0](astrid/v0.6.0.md) | Conversation, understanding, and participant-facing matchmaking |
+| Matchy | [v0.4.0](matchy/v0.4.0.md) | Private background compatibility reviews |
 
-Astrid's selected companion is [conversation examples v0.1.0](astrid/examples.v0.1.0.md). Both roles use the semantic handoff contract in [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md), currently v0.1.0. Earlier role drafts remain available for comparison.
+Astrid's selected companion is [conversation examples v0.3.0](astrid/examples.v0.3.0.md). Both roles use the semantic handoff contract in [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md), currently v0.1.0. Earlier role drafts remain available for comparison.
 
 ## Versioning
 
@@ -25,8 +25,20 @@ Load the selected role's `Prompt body`. For Astrid, also load the selected compa
 
 The protocol is an application design contract, not a document to indiscriminately append to every participant prompt. Supply the role-appropriate work-item contract and authorized runtime context separately. The role drafts already carry their behavioral handoff obligations. Tools and actual output schemas must be supplied by the future runtime, which validates their use.
 
-The selected drafts were used in a live gpt-6-astra smoke run on 2026-09-08: two Astrid conversation turns and one fictional Matchy review. Preserve these versions; future changes should use new versions. Transport and basic behavior worked, but this small manual check is not a comprehensive voice or adherence evaluation. The prompt lab runtime and commands are documented in the root README.md.
+Role versions v0.2.0 were used in a live gpt-6-astra smoke run and an unfamiliar-scenario review on 2026-09-08. Preserve them. Matchy v0.3.0 addresses the review's requirement-versus-willingness error. Astrid v0.3.0 was live-tested: it restored engagement but lingered in banter. Astrid v0.4.0 and examples v0.3.0 make direct, purposeful discovery the default; they have not yet been live-tested. The prompt lab selects each role's current version independently. The original evaluation runner explicitly pins v0.2.0 for reproducibility. The prompt lab runtime and commands are documented in the root README.md.
+
+The new pacing examples are teaching material, not test cases. Do not use their situations or paraphrases as evidence of generalization. The live conversation that informed the change is also development feedback, not an unseen test. Resume testing with a fresh user-led scenario and session; keep personal live transcripts in ignored local storage.
+
+Astrid v0.4.0 was subsequently live-tested and showed stronger probing and transitions. Selected v0.5.0 reorganizes that behavior around seven discovery goals, preserving directness and personality. It reuses the unchanged examples v0.3.0; their original compatibility metadata names v0.4.0, and this selection explicitly extends their use to v0.5.0. No new examples or evaluation cases were added for this restructure. The new version has not yet been live-tested.
 
 ## Review cases
+
+Selected Astrid v0.6.0 and Matchy v0.4.0 completed the ten-case regression suite; results and limits are recorded in evals/RESULTS_REGRESSION_0_6_0.md. Both versions are now frozen for future comparisons. A fresh live user conversation remains pending.
+
+Live feedback on v0.5.0 identified a personal-value verdict before an otherwise useful question. Selected Astrid v0.6.0 redirects that judgment toward consequences and reciprocal willingness, while preserving boundaries against harm. It explicitly asks about gender attraction alongside dating goals. Matchy v0.4.0 uses stated mutual eligibility and avoids inferred identities or pronouns. The unchanged examples v0.3.0 remain the selected companion for v0.6.0. Previous role versions are preserved; the paused user conversation is not silently migrated.
+
+Astrid v0.5.0 has now been exercised in the full ten-case regression run with Matchy v0.3.0; see evals/RESULTS_REGRESSION_2026-09-08.md. Preserve these prompt/example assets for reproducibility. A live user-led conversation with v0.5.0 is still pending.
+
+After a behavioral prompt change, run `npm run eval` against the selected versions and manually review all ten cases against their existing rubrics. Keep this regression step separate from the five offline runtime tests and from live conversation testing. Record exact versions, evidence, failures, and limitations. Use explicit version flags to compare earlier prompts; the historical `eval:unseen` command still pins v0.2.0. Known teaching examples and previously used cases are not new generalization evidence.
 
 Review revisions against the product demo and its branches: natural story-led probing; baseline gaps; polished evasions; an apparent mismatch clarified; a firm mismatch withheld; a no-spark decline; permission before uncertain sharing; corrected memory changing a match; and double opt-in followed by Astrid leaving the shared chat. These are review scenarios, not claims that the prompts have been evaluated.
