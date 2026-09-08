@@ -1,6 +1,6 @@
 # Local demo implementation contract
 
-Implemented local-demo contract, 2026-09-08. See [README.md](README.md) for startup and limits and [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the prepared lifecycle. Node 22 ES modules, built-in HTTP server and a browser UI with no build step. Multiple pending proposals and multiple connection chats are allowed. Participant switching is explicitly a local demo feature, not authentication. Server binds to 127.0.0.1. Real provider calls use the existing ignored .env. Offline mode is explicitly labeled scripted demo mode.
+Implemented local-demo contract, 2026-09-08. See [README.md](README.md) for startup and limits and [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the prepared lifecycle. Node 22 ES modules, built-in HTTP server and a browser UI with no build step. Multiple pending proposals and multiple connection chats are allowed. Each participant has a fixed localhost port; these windows are not production authentication. One process binds the participant listeners and a separate operator port to 127.0.0.1. Real provider calls use the existing ignored .env. Offline mode is explicitly labeled scripted demo mode.
 
 ## Implementation status
 
@@ -26,9 +26,9 @@ Job: {id,kind:'matching',status:'queued'|'running'|'completed'|'failed',particip
 
 ## HTTP API
 
-JSON throughout; errors {error}. Participant-scoped routes require X-Participant-Id equal to requested participant. This is a demo routing guard, not auth. Mutations refresh UI via GET. Server serializes state writes; model calls happen outside transactions with freshness checks at commit.
+JSON throughout; errors {error}. Personal ports derive the actor from their fixed participant; any conflicting X-Participant-Id is rejected. The operator listener and bare test server require X-Participant-Id for participant-scoped operations. This is a local routing guard, not authentication. Mutations refresh UI via GET. Server serializes state writes; model calls happen outside transactions with freshness checks at commit.
 
-- GET /api/bootstrap → {participants:[publicProfile],mode:'live'|'offline',topics:[{id,label}],facets,fictional:true}
+- GET /api/bootstrap → {participants:[publicProfile],mode:'live'|'offline',topics:[{id,label}],facets,activeParticipantId,operator,fictional:true}
 - GET /api/participants/:id → {participant,memories,coverage:{[topic]:boolean},coverageDetails:{[facet]:boolean},profileConflicts,messages:[private],proposals,chats:[{...chat,other:publicProfile,messages}],permissions,clarifications,busy:boolean}
 - POST /api/participants/:id/messages {text} → {message,reply?,memoryUpdates?,error?}. Async model work can take time; UI shows typing. User message persists even if agent fails. No character deltas initially: reliable completed-message transport first.
 - PATCH /api/participants/:id/profile {matchingEnabled?,age?,location?,gender?,pronouns?,interestedIn?,bio?,ageRange?} → {participant}
@@ -44,8 +44,8 @@ JSON throughout; errors {error}. Participant-scoped routes require X-Participant
 - GET /api/chats/:id → {chat,messages}; actor must be a member.
 - POST /api/chats/:id/messages {text} → {message}; actor must be member, no agent.
 - POST /api/participants/:id/checkin {chatId} → {reply}; only own context plus approved other profile, no shared transcript.
-- GET /api/presenter → {jobs,reviews,events,counts,mode}; explicitly separate fictional presenter screen.
-- POST /api/demo/reset {} → {ok:true}; rejects while model work is active; resets only app store, never prompt-lab sessions.
+- GET /api/presenter (operator port only) → {jobs,reviews,events,counts,mode}; explicitly separate fictional presenter screen.
+- POST /api/demo/reset (operator port only) {} → {ok:true}; rejects while model work is active; resets only app store, never prompt-lab sessions.
 
 ## Agent module exports (root consumes)
 

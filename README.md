@@ -12,7 +12,7 @@ For live Astra conversations, create a local `.env` using `.env.example`, or set
 npm start
 ```
 
-Open [the local demo](http://127.0.0.1:4310). Switch between fictional people using the tabs. The **Behind the scenes** view shows reviews, jobs, and a reset control. Follow the [demo walkthrough](DEMO_WALKTHROUGH.md) to demonstrate the lifecycle and its alternative branches.
+Open each person in their own browser window: [Maya](http://127.0.0.1:4310), [Eli](http://127.0.0.1:4311), and [Theo](http://127.0.0.1:4312). Each port stays with that person; all windows share matching and connection state. Operator controls live separately at [port 4313](http://127.0.0.1:4313/?view=presenter). Follow the [walkthrough](DEMO_WALKTHROUGH.md) for the lifecycle and alternative branches.
 
 For a repeatable walkthrough without a key or network:
 
@@ -20,9 +20,9 @@ For a repeatable walkthrough without a key or network:
 npm run demo:offline
 ```
 
-Offline mode is explicitly labeled and uses scripted agent responses. It exercises real application state and consent rules; it is not evidence of model performance. Stop one server before starting another. Both modes use the same default app store; reset the fictional demo when changing modes for a clean run.
+The offline command uses scripted agent responses; the personal interface stays visually identical to live mode. It exercises real application state and consent rules; it is not evidence of model performance. Stop one server before starting another. Both modes use the same default app store; reset the fictional demo when changing modes for a clean run.
 
-The server binds to `127.0.0.1`. Participant switching and the presenter view are local demo controls, not authentication or production access security. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
+One process binds to `127.0.0.1` on ports 4310–4313 (or consecutively from `PORT`). Participant ports enforce a fixed identity and exclude operator endpoints; these local windows are not production authentication. Use fictional data. Several proposals and connection chats may coexist. Pausing matching stops new introductions; existing connection chats persist.
 
 ## What is implemented
 
@@ -33,7 +33,7 @@ The server binds to `127.0.0.1`. Participant switching and the presenter view ar
 - An opening, nudge, and visible Astrid departure. Subsequent shared messages are not sent to an agent. A participant can request a private check-in.
 - Participant-specific sharing permission requests, memory revision checks, and application enforcement of consent and chat membership.
 
-This is a single-process file-backed demo. The browser displays completed replies with a typing state; token streaming is available in the separate CLI lab. There is no authentication, periodic matching scheduler, production notification system, or full post-date learning workflow. Simple coverage and eligibility checks are demo approximations, not proof of compatibility.
+This is a single-process file-backed demo. The interface uses a warm paper and woodland palette with a generated illustrated Astrid portrait. Technical status and operator controls stay outside personal conversations. The browser displays completed replies with a typing state; token streaming is available in the separate CLI lab. There is no authentication, periodic matching scheduler, production notification system, or full post-date learning workflow. Simple coverage and eligibility checks are demo approximations, not proof of compatibility.
 
 ## Keep testing the prompts
 

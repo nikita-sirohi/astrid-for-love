@@ -5,7 +5,6 @@ const button = (label, className, action) => { const node = el('button', classNa
 let bootstrap, activeId, data, view = 'people', conversation = 'astrid', panel = 'memory', sending = false, refreshing = false;
 let chatSignature = '', knowledgeSignature = '', presenterSignature = '', toastTimer;
 const drafts = new Map();
-const expandedHistories = new Set();
 const participant = (id) => bootstrap?.participants.find(p => p.id === id);
 const name = (id) => participant(id)?.name || id;
 const topicLabel = (id) => bootstrap.topics.find(t => t.id === id)?.label || id;
@@ -13,7 +12,7 @@ const facetLabel = (id) => bootstrap.facets?.find(f => f.id === id)?.label;
 const profileFieldLabel = (id) => ({age:'Age',location:'Location',gender:'Gender',interestedIn:'Interested in dating',ageRange:'Preferred age range',pronouns:'Pronouns'})[id] || 'Profile detail';
 const profileValue = (value) => Array.isArray(value) ? value.join(', ') : String(value ?? 'Not yet shared');
 function avatar(person, className = '') {
-  if (!person || person.id === 'astrid') return el('span', `avatar astrid-avatar ${className}`, '✳');
+  if (!person || person.id === 'astrid') {const image=el('img',`avatar astrid-avatar ${className}`);image.src='/assets/portraits/astrid-illustrated.png';image.alt='Astrid';return image;}
   const image = el('img', `avatar ${className}`); image.src = person.photo || ''; image.alt = person.name; image.style.objectPosition = person.photoPosition || 'center';
   image.addEventListener('error', () => image.replaceWith(el('span', `avatar ${className}`, person.name?.slice(0, 1) || '?')), {once:true});
   return image;
@@ -34,33 +33,25 @@ function draftKey() { return `${activeId}/${conversation}`; }
 function saveDraft() { if(activeId) drafts.set(draftKey(), $('#message-input').value); }
 function resetSignatures() { chatSignature = ''; knowledgeSignature = ''; }
 function selectConversation(id) { saveDraft(); conversation = id; $('#message-input').value = drafts.get(draftKey()) || ''; chatSignature = ''; render(); }
-async function selectParticipant(id) {
-  if(id === activeId) return; saveDraft(); activeId = id; localStorage.setItem('astrid-demo-participant', id); conversation = 'astrid'; data = null; resetSignatures();
-  $('#message-input').value = drafts.get(draftKey()) || ''; renderTabs(); $('#chat-content').replaceChildren(el('p','empty-state','Getting your corner ready…')); $('#knowledge').replaceChildren();
-  await refresh(true);
-}
-function renderTabs() {
-  $('#participants').replaceChildren(...bootstrap.participants.map(p => { const b = button('', `participant-tab ${p.id === activeId ? 'active' : ''}`, () => selectParticipant(p.id)); b.setAttribute('aria-pressed', String(p.id === activeId)); return append(b, avatar(p), el('span','',p.name.split(' ')[0])); }));
-}
 function renderNav() {
   const nav = $('#conversation-nav');
   const item = (id, person, title, subtitle) => append(button('',`conversation-button ${conversation === id ? 'active' : ''}`,() => selectConversation(id)),avatar(person),append(el('span'),el('strong','',title),el('small','',subtitle)));
-  nav.replaceChildren(item('astrid',null,'Astrid','Your matchmaking friend'), el('p','section-label','YOUR CONNECTIONS'));
+  nav.replaceChildren(item('astrid',null,'Astrid','Your matchmaking friend'), el('p','section-label','People you’ve met'));
   for(const chat of data.chats) nav.append(item(chat.id,chat.other,chat.other.name.split(' ')[0],'Just the two of you'));
-  if(!data.chats.length) nav.append(el('p','nav-empty','Something good starts with a conversation. Your connections will land here.'));
+  if(!data.chats.length) nav.append(el('p','nav-empty','A space for someone you haven’t met yet.'));
   const pending = data.proposals.filter(p => p.status === 'pending').length;
   if(pending) nav.append(item('proposals',{id:'astrid'},'A little spark',`${pending} introduction${pending === 1 ? '' : 's'} to consider`));
 }
 function renderHeading() {
   const h = $('#chat-heading'); const chat = data.chats.find(c => c.id === conversation);
-  h.replaceChildren(avatar(chat?.other), append(el('div'),el('h1','',chat ? chat.other.name : conversation === 'proposals' ? 'A little spark' : 'Astrid'),el('p','',chat ? 'Introduced by Astrid. The rest is yours.' : 'Curious about the whole you.')));
+  h.replaceChildren(avatar(chat?.other), append(el('div'),el('h1','',chat ? chat.other.name : conversation === 'proposals' ? 'A little spark' : 'Astrid'),el('p','',chat ? 'Introduced by Astrid. The rest is yours.' : 'Your AI matchmaking friend')));
   if(chat) h.append(button('Check in privately ↗','button light small inline-checkin', async () => {
     const actor = activeId; const b = h.querySelector('button'); b.disabled = true;
     try { await api(`/api/participants/${actor}/checkin`,{method:'POST',body:{chatId:chat.id}},actor); if(actor === activeId) { selectConversation('astrid'); await refresh(true); } toast('Your private check-in is ready.'); }
     catch(error) { showError(error.message); } finally { b.disabled = false; }
-  })); else h.append(el('span','chat-label','YOUR MATCHMAKING FRIEND'));
+  })); else h.append(el('span','chat-label','✦'));
   $('#composer').hidden = conversation === 'proposals';
-  $('#message-input').placeholder = chat ? `Say something to ${chat.other.name.split(' ')[0]}…` : 'Tell Astrid what’s on your mind…';
+  $('#message-input').placeholder = chat ? `Say something to ${chat.other.name.split(' ')[0]}…` : 'Tell me what’s on your mind…';
   $('#composer-note').textContent = chat ? 'Astrid has left this chat. This conversation stays between you two.' : 'Just between you and Astrid.';
   $('#typing').hidden = !(conversation === 'astrid' && (data.busy || sending));
   $('#send').disabled = sending || (conversation === 'astrid' && data.busy);
@@ -71,7 +62,7 @@ function messageNode(message) {
   const item = el('article',`message ${own ? 'own' : ''}`);
   if(!own) item.append(avatar(message.authorId === 'astrid' ? null : participant(message.authorId)));
   const body = el('div','message-body');
-  if(!own) body.append(el('div','message-name',message.authorId === 'astrid' ? 'ASTRID' : name(message.authorId).toUpperCase()));
+  if(!own) body.append(el('div','message-name',message.authorId === 'astrid' ? 'Astrid' : name(message.authorId)));
   body.append(el('div','message-text',message.text)); item.append(body); return item;
 }
 function proposalNode(proposal) {
@@ -110,23 +101,12 @@ function renderChat() {
   const content = $('#chat-content'); const nearBottom = content.scrollHeight-content.scrollTop-content.clientHeight < 100; const oldScroll = content.scrollTop;
   content.replaceChildren();
   if(conversation === 'proposals') {
-    content.append(el('div','date-divider','A LITTLE CURIOSITY GOES A LONG WAY'));
+    content.append(el('div','date-divider','Someone to be curious about.'));
     for(const p of [...data.proposals].reverse()) content.append(proposalNode(p));
     if(!data.proposals.length) content.append(el('p','empty-state','No introductions yet. Keep getting to know Astrid.'));
   } else {
-    content.append(el('div','date-divider',chat ? 'THE START OF SOMETHING' : 'YOUR STORY, STILL UNFOLDING'));
-    if(!messages.length) content.append(append(el('div','empty-chat'),el('span','asterisk','✳'),el('h2','','You bring the stories. I’ll bring the curiosity.'),el('p','','Tell me something about your week. A tiny victory, a strong opinion, a very good distraction. We’ll start there.')));
-    const prepared = messages.filter(message => message.fixture);
-    if(prepared.length) {
-      const history = el('details','prepared-history');
-      const historyKey = draftKey();
-      history.open = expandedHistories.has(historyKey);
-      history.addEventListener('toggle', () => history.open ? expandedHistories.add(historyKey) : expandedHistories.delete(historyKey));
-      history.append(el('summary','','Prepared fictional conversation'));
-      const transcript = el('div','prepared-transcript');
-      for(const message of prepared) transcript.append(messageNode(message));
-      history.append(transcript); content.append(history);
-    }
+    content.append(el('div','date-divider',chat ? 'The beginning of something.' : 'Just us, for now.'));
+    if(!messages.length) content.append(append(el('div','empty-chat'),avatar(null),el('h2','','You bring the stories. I’ll bring the curiosity.'),el('p','','Tell me something about your week. A tiny victory, a strong opinion, a very good distraction. We’ll start there.')));
     for(const message of messages.filter(message => !message.fixture)) content.append(messageNode(message));
     if(!chat) {
       for(const permission of data.permissions.filter(p=>p.status === 'pending')) content.append(permissionNode(permission));
@@ -149,11 +129,8 @@ function renderKnowledge() {
     notice.append(button('Check your profile','button subtle small',profileDialog)); target.append(notice);
   }
   if(panel === 'profile') { renderProfile(target); return; }
-  const count = bootstrap.topics.filter(t=>data.coverage[t.id]).length;
-  const coverage = el('div','coverage'); coverage.append(append(el('div','coverage-heading'),el('span','','Getting to know you'),el('span','',`${count} / ${bootstrap.topics.length} areas explored`)));
-  const bars = el('div','coverage-bars'); for(const topic of bootstrap.topics) { const bar = el('span',data.coverage[topic.id] ? 'covered' : ''); bar.title = topic.label; bars.append(bar); } coverage.append(bars,el('p','','A little direction for Astrid, not a score for you.')); target.append(coverage);
   for(const topic of bootstrap.topics) {
-    const group = el('section','memory-group'); group.append(append(el('div','topic-heading'),el('h3','',topic.label),el('span','',data.coverage[topic.id] ? '✓' : '○')));
+    const group = el('section','memory-group'); group.append(append(el('div','topic-heading'),el('h3','',topic.label)));
     const memories = data.memories.filter(m=>m.topic === topic.id && !m.deleted);
     if(!memories.length) group.append(el('p','topic-empty','Room for a conversation.'));
     for(const memory of memories) {
@@ -162,8 +139,6 @@ function renderKnowledge() {
       meta.append(el('span',`tag ${memory.status}`,memory.status === 'confirmed' ? 'Confirmed' : 'Astrid’s read'),el('span','tag',({requires:'Firm requirement',prefers:'Preference',accepts:'Open to',unknown:'Still exploring'})[memory.strength] || memory.strength),el('span','tag',memory.sharing === 'shareable' ? 'Shareable' : 'Private'));
       card.append(meta,el('p','',memory.text),append(el('div','memory-actions'),button('Edit','text-button',()=>memoryDialog(memory)),button('Remove','text-button',()=>removeMemory(memory)),memory.sharing === 'private' ? button('Sharing permission','text-button',()=>permissionDialog(memory)) : null)); group.append(card);
     }
-    const unexplored=(bootstrap.facets||[]).filter(f=>f.topic===topic.id && data.coverageDetails && !data.coverageDetails[f.id]);
-    if(unexplored.length) group.append(el('p','topic-empty',`Still getting to know: ${unexplored.map(f=>f.label.toLowerCase()).join(', ')}.`));
     target.append(group);
   }
   target.append(button('+ Add something Astrid should know','button subtle add-memory',()=>memoryDialog()));
@@ -173,7 +148,7 @@ function renderProfile(target) {
   card.append(el('h3','',`${p.name}, ${p.age}`),el('p','',[p.location,p.pronouns].filter(Boolean).join(' · ')),el('p','',p.bio));
   const dl = el('dl'); for(const [label,value] of [['Gender',p.gender || 'Not yet shared'],['Interested in dating',p.interestedIn?.join(', ') || 'Not yet shared'],['Age range',p.ageRange?.join('–') || 'Not yet shared'],['Matching',p.matchingEnabled ? 'Open to introductions' : 'Paused']]) dl.append(el('dt','',label),el('dd','',value)); card.append(dl,button('Edit your profile','button subtle',profileDialog)); target.append(card);
 }
-function render() { if(!data) return; renderTabs(); renderNav(); renderHeading(); renderChat(); renderKnowledge(); }
+function render() { if(!data) return; $('#your-corner').textContent=`A little space for ${data.participant.name.split(' ')[0]}.`; renderNav(); renderHeading(); renderChat(); renderKnowledge(); }
 function field(label,type,value,options) {
   const wrap = el('label','field',label); const input = el(type === 'textarea' ? 'textarea' : type === 'select' ? 'select' : 'input');
   if(type === 'select') for(const [id,name] of options) { const option = el('option','',name); option.value = id; input.append(option); }
@@ -256,9 +231,19 @@ $('#composer').addEventListener('submit',async event=>{
 $('#message-input').addEventListener('input',saveDraft);
 $('#message-input').addEventListener('keydown',event=>{ if(event.key==='Enter'&&!event.shiftKey&&!event.isComposing) { event.preventDefault(); $('#composer').requestSubmit(); } });
 $('#review-matches').addEventListener('click',startMatching);
+$('#notebook-matching').addEventListener('click',startMatching);
 $('#memory-tab').addEventListener('click',()=>{ panel='memory'; renderKnowledge(); });
 $('#profile-tab').addEventListener('click',()=>{ panel='profile'; renderKnowledge(); });
-function setView(next) { saveDraft(); view=next; $('#workspace').hidden=next!=='people'; $('#presenter').hidden=next!=='presenter'; $('#people-view').classList.toggle('nav-active',next==='people'); $('#presenter-view').classList.toggle('nav-active',next==='presenter'); refresh(true); }
-$('#people-view').addEventListener('click',()=>setView('people')); $('#presenter-view').addEventListener('click',()=>setView('presenter'));
-async function init() { try { bootstrap=await api('/api/bootstrap'); activeId=bootstrap.participants.find(p=>p.id===localStorage.getItem('astrid-demo-participant'))?.id || bootstrap.participants[0]?.id; if(!activeId) throw new Error('No demo participants are available.'); $('#mode').textContent=bootstrap.mode==='offline'?'SCRIPTED DEMO · LOCAL STORAGE':'LIVE ASTRID · LOCAL STORAGE'; renderTabs(); await refresh(true); setInterval(()=>{ if(!document.hidden) refresh(); },3000); } catch(error) { showError(error.message,init); } }
+function toggleNotebook(open) { $('#notebook').hidden=!open;$('#notebook-toggle').setAttribute('aria-expanded',String(open)); }
+$('#notebook-toggle').addEventListener('click',()=>toggleNotebook($('#notebook').hidden));
+$('#notebook-close').addEventListener('click',()=>toggleNotebook(false));
+document.addEventListener('keydown',event=>{if(event.key==='Escape')toggleNotebook(false);});
+async function init() {
+  try {
+    bootstrap=await api('/api/bootstrap');activeId=bootstrap.activeParticipantId || bootstrap.participants[0]?.id;
+    if(!activeId)throw new Error('Your space isn’t available yet. Please try again.');
+    if(bootstrap.operator && new URLSearchParams(location.search).get('view')==='presenter') {view='presenter';$('#workspace').hidden=true;$('#presenter').hidden=false;$('#notebook-toggle').hidden=true;}
+    await refresh(true);setInterval(()=>{if(!document.hidden)refresh();},3000);
+  } catch(error) {showError(error.message,init);}
+}
 init();

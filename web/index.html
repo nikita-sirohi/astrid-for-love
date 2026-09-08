@@ -2,20 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#3d233e">
-  <title>Astrid for Love — a little more human</title>
+  <meta name="theme-color" content="#f4f1e5">
+  <title>Astrid for Love</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <div class="demo-bar"><span><i></i> FICTIONAL PEOPLE. REAL POSSIBILITIES.</span><span id="mode">Local demo</span></div>
-  <header class="masthead"><a class="wordmark" href="/">astrid<span>for love ✳</span></a><nav><button id="people-view" class="nav-active">Your world</button><button id="presenter-view">Behind the scenes</button></nav><span class="masthead-note">Good chemistry starts<br>with being understood.</span></header>
-  <section class="identity-bar"><span class="eyebrow">DEMO · SEE THROUGH THEIR EYES</span><div id="participants" class="participant-tabs" aria-label="Switch fictional participant"></div></section>
+  <header class="masthead">
+    <a class="wordmark" href="/" aria-label="Astrid for Love">astrid<span class="drawn-sprig" aria-hidden="true"></span><small>for love</small></a>
+    <span class="masthead-note">A good place to begin.</span>
+    <button id="notebook-toggle" class="notebook-toggle" aria-expanded="false" aria-controls="notebook">My notebook <span aria-hidden="true">↗</span></button>
+  </header>
   <div id="error" class="error-banner" role="alert" hidden></div>
   <main id="workspace" class="workspace">
-    <aside class="sidebar"><div class="sidebar-title"><span class="eyebrow">YOUR LITTLE CORNER</span><span>↗</span></div><div id="conversation-nav"></div><div class="sidebar-bottom"><span class="asterisk">✳</span><h3>Less swiping.<br>More <em>something.</em></h3><p>Astrid gets to know you.<br>The whole, interesting you.</p><button id="review-matches" class="button subtle">Find a connection <span>↗</span></button><p class="fineprint">Introductions always take two yeses.</p></div></aside>
-    <section class="chat-panel"><header id="chat-heading" class="chat-heading"></header><div id="chat-content" class="chat-content" aria-live="polite"></div><div id="typing" class="typing" hidden><span>✳</span> Astrid is giving that some thought<span class="dots">…</span></div><form id="composer" class="composer"><label class="sr-only" for="message-input">Your message</label><textarea id="message-input" rows="1" placeholder="Tell Astrid what’s on your mind…" maxlength="12000"></textarea><button type="submit" id="send" aria-label="Send message">↑</button><p id="composer-note">Just between you and Astrid.</p></form></section>
-    <aside class="understanding"><div class="understanding-header"><span class="eyebrow">IN YOUR OWN WORDS</span><h2>What makes<br>you, <em>you.</em></h2><p>Astrid’s understanding is a work in progress. You get the final say.</p></div><div class="panel-tabs"><button id="memory-tab" class="selected">Understanding</button><button id="profile-tab">Your profile</button></div><div id="knowledge"></div></aside>
+    <aside class="sidebar">
+      <div class="sidebar-intro"><span class="tiny-flower" aria-hidden="true">✦</span><p id="your-corner">Make yourself at home.</p></div>
+      <div id="conversation-nav"></div>
+      <div class="sidebar-bottom"><div class="little-note"><span class="drawn-sprig" aria-hidden="true"></span><p>Good things start<br>with <em>hello.</em></p></div><button id="review-matches" class="button subtle">Who should I meet? <span aria-hidden="true">↗</span></button><p class="fineprint">Only when you both say yes.</p></div>
+    </aside>
+    <section class="chat-panel">
+      <header id="chat-heading" class="chat-heading"></header>
+      <div id="chat-content" class="chat-content" aria-live="polite"></div>
+      <div id="typing" class="typing" hidden><img src="/assets/portraits/astrid-illustrated.png" alt=""> Astrid is thinking<span class="dots">…</span></div>
+      <form id="composer" class="composer"><div class="composer-input"><label class="sr-only" for="message-input">Your message</label><textarea id="message-input" rows="1" placeholder="Tell me what’s on your mind…" maxlength="12000"></textarea><button type="submit" id="send" aria-label="Send message">↑</button></div><p id="composer-note">Just between you and Astrid.</p></form>
+    </section>
   </main>
+  <aside id="notebook" class="understanding" hidden aria-label="Your notebook">
+    <div class="understanding-header"><button id="notebook-close" class="close-notebook" aria-label="Close notebook">×</button><span class="notebook-kicker">the little things, & the big things</span><h2>Notes on <em>you.</em></h2><p>What Astrid’s getting to know.<br>Always yours to change.</p></div>
+    <div class="panel-tabs"><button id="memory-tab" class="selected">What I know</button><button id="profile-tab">Your profile</button></div><div id="knowledge"></div><button id="notebook-matching" class="button subtle notebook-matching">Who should I meet? ↗</button>
+  </aside>
   <main id="presenter" class="presenter" hidden></main>
   <dialog id="editor"><form id="editor-form"></form></dialog>
   <div id="toast" class="toast" role="status" hidden></div>

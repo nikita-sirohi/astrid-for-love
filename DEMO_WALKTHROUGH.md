@@ -1,12 +1,12 @@
 # Demo walkthrough
 
-Start with `npm start` for live Astra or `npm run demo:offline` for scripted responses, then open http://127.0.0.1:4310. The mode label distinguishes them. Both use fictional participants and real local application state. Live wording and decisions can vary; offline wording is prepared and should be presented as such.
+Start with `npm start` for live Astra or `npm run demo:offline` for scripted responses, then open Maya at http://127.0.0.1:4310, Eli at http://127.0.0.1:4311, and Theo at http://127.0.0.1:4312 in separate windows. The command you launch determines live versus scripted mode; the personal interface has no technical badges. Both use fictional participants and real local application state. Live wording and decisions can vary; offline wording is prepared and should be presented as such.
 
-Use **Behind the scenes → Reset fictional demo** before a clean demonstration. Reset waits until active conversations and matching work have finished. It resets application data, not prompt-lab sessions.
+Open http://127.0.0.1:4313/?view=presenter and use the reset control before a clean demonstration. Reset waits until active conversations and matching work have finished. It resets application data, not prompt-lab sessions.
 
 ## 1. Get to know Maya
 
-Select Maya's participant tab. The prepared fictional understanding covers six of the seven areas; **Family & future** remains unresolved. This is an accelerated continuation of getting acquainted, not a claim that six topics were learned during the demo.
+Open Maya’s window. The prepared fictional understanding covers six of the seven areas; **Family & future** remains unresolved. This is an accelerated continuation of getting acquainted, not a claim that six topics were learned during the demo.
 
 Begin with a short story about a Sunday with her mother, then let Astrid follow the conversation. In live mode, respond to what she actually asks rather than forcing a memorized script. Show how her question moves from the story toward an expectation that matters to a future relationship.
 
@@ -20,15 +20,15 @@ Inspect **Understanding**: the family memory should now express the expectation,
 
 ## 2. Show the decision behind the introduction
 
-A meaningful committed change queues matching work. **Find a connection** also requests a review. Open **Behind the scenes** to watch the job and candidate decisions.
+A meaningful committed change queues matching work. **Find a connection** also requests a review. Open the operator window on port4313 to watch the job and candidate decisions.
 
 The prepared records are designed to make Maya and Eli promising: Eli can accept family living arrangements with separate space and professional care. Theo has a conflicting firm expectation. The live smoke produced a Maya/Eli proposal and withheld Maya/Theo; a new live run can instead request clarification. Inspect the rationale rather than forcing a success label.
 
-Return to Maya's private chat. Her proposal should contain Eli's photo, basic information, and short personality-led copy. The private family assessment belongs in the presenter view, not in that proposal. The [portraits are generated fictional assets](web/assets/portraits/README.md).
+Return to Maya’s window and private chat. Her proposal should contain Eli's photo, basic information, and short personality-led copy. The private family assessment belongs in the presenter view, not in that proposal. The [portraits are generated fictional assets](web/assets/portraits/README.md).
 
 ## 3. Demonstrate two real decisions
 
-Accept as Maya. Show that no connection chat exists yet. Switch to Eli: his proposal has his own introduction copy. Accept as Eli.
+Accept as Maya. Show that no connection chat exists yet. Open Eli’s window: his proposal has his own introduction copy. Accept as Eli.
 
 The connection chat now opens with Astrid's introduction, a light nudge, and her visible departure. Send a message as Maya and reply as Eli. Astrid does not receive or answer those shared messages. Multiple distinct proposals and chats are supported; accepting one does not require closing every other conversation.
 
@@ -55,4 +55,4 @@ Approval applies to this detail, its version, and this recipient. It does not ma
 
 ## What to say about the build
 
-This is a local, single-process demo with a scoped file-backed memory API and separate Memy, Astrid, and Matchy roles. Jobs are event-triggered or manually requested; there is no periodic scheduler. Participant tabs and the presenter screen are deliberate demo controls, not authentication. The browser waits for completed replies; the independent prompt lab supports streaming. Keep improving prompts through live conversations and the regression suites alongside this application walkthrough.
+This is a local, single-process demo with a scoped file-backed memory API and separate Memy, Astrid, and Matchy roles. Jobs are event-triggered or manually requested; there is no periodic scheduler. Separate participant ports and the operator screen are local access controls, not authentication. The browser waits for completed replies; the independent prompt lab supports streaming. Keep improving prompts through live conversations and the regression suites alongside this application walkthrough.

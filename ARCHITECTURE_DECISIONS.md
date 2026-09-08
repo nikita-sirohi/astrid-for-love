@@ -54,7 +54,7 @@ Accepted. Build an attractive, focused demo UI with:
 2. A shared introduction chat: person–Astrid–connection briefly, then person–connection after Astrid's visible departure. Subsequent support happens privately; shared messages do not automatically trigger or enter Astrid's context.
 3. An editable “What Astrid knows about you” panel showing confirmed understanding, tentative interpretations, gaps, and sharing controls. Corrections feed back into matching.
 
-A separate presenter view exposes concise decision evidence, pending jobs, and lifecycle state for fictional demo participants. It is clearly labeled for fictional demonstration. The implementation uses browser HTML/CSS/JavaScript with no build step, participant tabs instead of authentication, and completed-message responses with a typing indicator. The server binds to localhost; the presenter surface is not production access control.
+A separate presenter view exposes concise decision evidence, pending jobs, and lifecycle state for fictional demo participants. It is clearly labeled for fictional demonstration. The implementation uses browser HTML/CSS/JavaScript with no build step, separate participant ports instead of authentication, and completed-message responses with a typing indicator. The server binds to localhost; the presenter surface is not production access control.
 
 ## AD-007 — Versioned prompts are repository assets
 
@@ -93,13 +93,13 @@ Five offline tests cover stream fragmentation, incomplete results, safe errors, 
 
 ## AD-011 — Local demo application and deliberate limits
 
-Implemented. The HTTP API and JsonFileRepository isolate the browser and agents from file layout. Application routes enforce participant ownership, consent, revisions, and chat membership. This is a replaceable persistence boundary, not a production database service. Participants are switched through tabs and profiles are edited explicitly; there is no login.
+Implemented. The HTTP API and JsonFileRepository isolate the browser and agents from file layout. Application routes enforce participant ownership, consent, revisions, and chat membership. This is a replaceable persistence boundary, not a production database service. Each participant has a fixed local port and profiles remain editable; there is no login.
 
 Readiness requires confirmed, non-unknown understanding in seven topics. Eligibility checks explicit gender interests in both directions, age ranges, matching opt-in, and same location. These are conservative demo approximations: topic coverage is not a quality score, gender labels currently compare exactly, and distance flexibility is not modeled. Matchy's judgment remains necessary after deterministic checks.
 
 Matchy receives pair-scoped memory. Private Astrid context receives only that person's memory and facet-scoped clarification needs; free-form pair rationale is kept out. Introductions receive public profiles and appropriately authorized details. The shared opening and departure are persisted together after double acceptance. Later connection messages do not go to an agent. Check-ins are private and manually requested; full post-date learning is deferred.
 
-Offline mode is visibly scripted and exercises state transitions without a provider. Live mode uses current versioned prompts and validated structured outputs. Prepared demo fixtures and portrait assets are fictional; [asset provenance](web/assets/portraits/README.md) is recorded separately.
+The offline launch command selects scripted responses and exercises state transitions without a provider; technical mode labels stay out of the personal interface. Live mode uses current versioned prompts and validated structured outputs. Prepared demo fixtures and portrait assets are fictional; [asset provenance](web/assets/portraits/README.md) is recorded separately.
 
 ## Next decisions
 
@@ -128,3 +128,9 @@ Matchy selects a recipient, exact facet, and that recipient’s own evidence IDs
 Explicit latest-user profile facts update the authoritative matching profile before Astrid replies. UI edits lock individual fields; a conflicting new statement requires resolution unless the user explicitly corrects the field. Unresolved conflicts block proposals. Opt-in remains an explicit UI/API decision. Age and location are editable.
 
 Temporary audit reports and evaluation findings are local artifacts, not repository documentation. Keep lasting decisions here and in product/protocol/prompt files; keep reusable tests and fixtures in code.
+
+## AD-014: Personal windows and a warm conversation interface
+
+Each participant has a fixed local port; one application process and file-store writer serve all windows. Default ports are Maya4310, Eli4311, Theo4312; a separate operator listener on4313 exposes review/reset tools. Requests on a personal port cannot impersonate a different participant or access operator endpoints. This remains a local demo access model, not production authentication. Browser drafts are independent by origin.
+
+The participant experience has no identity switcher, model/storage badges, demo banners, or operator navigation. Use a clean, cozy storybook chat design with parchment, moss, and sky tones. Astrid has a younger Mediterranean-looking illustrated portrait, clearly distinct from the photographic participants; avoid pink-heart decoration. Memory and profile controls remain accessible without displaying readiness as a score or interview checklist. Technical details belong in operator tools and developer documentation.
