@@ -4,7 +4,7 @@ An opinionated AI matchmaking friend that learns what being your partner would a
 
 Built from scratch for the hackathon on **September 8, 2026**. The repository's application code, prompts, tests, documentation, and generated illustrations were created that day. The app uses OpenAI's API and standard platform capabilities; it has no third-party runtime packages or dependency on another local project.
 
-Astrid's goal is a good introduction, not a longer conversation. She learns through stories, probes meaningful tradeoffs, and checks her understanding. Compatibility stays private; introductions lead with personality and require both people to say yes.
+Astrid's goal is a good introduction, not a longer conversation. She learns through stories, probes meaningful tradeoffs, and checks her understanding. Browsing assessments explain real compatibility, including potential friction. Introductions lead with personality and require both people to say yes.
 
 ## Start your own demo
 

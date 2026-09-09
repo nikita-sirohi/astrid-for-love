@@ -323,12 +323,12 @@ export class AstridApp {
       const status=this.browseStatus(s,a,b,review);
       const canRequest=this.assessmentStatus(review)!=='hold'&&!eligibility(a,b)&&a.discoverable===true&&!existing&&!this.declinedPair(s,ids);
       const basis=b.demoShell&&!this.memoryStore.records(s,otherId).length?'other_unstarted':review.phase==='preliminary'?'preliminary':review.phase==='gated'?'unassessed':'reviewed';
-      // Only the actor's own uncertainty goes to Astrid. Other-person concerns and
-      // all pair rationale remain private even when they explain the match judgment.
+      // Browsing may explain the pair's high-level compatibility conclusion.
+      // Raw counterpart records and stories remain separately permission-scoped.
       let topics=(review.clarifications||[]).filter(c=>c.participantId===id).map(c=>({facet:c.facet,purpose:c.purpose||'baseline',evidenceIds:(c.evidenceIds||[]).filter(e=>s.memories.some(m=>m.id===e&&m.participantId===id&&!m.deleted))}));
       if(!topics.length&&status==='hold'&&!this.declinedPair(s,ids)&&review.decision!=='withhold')topics=Object.entries(topicUnderstanding(s,id)).filter(([,detail])=>detail.status!=='understood').slice(0,2).map(([topic])=>({facet:facets.find(f=>f.topic===topic).id,purpose:'baseline',evidenceIds:[]}));
       if(basis==='other_unstarted')topics=[];
-      const advice=await this.agents.advise({participant:a,memories:this.memoryStore.records(s,id),other:publicProfile(b),shareableMemories:this.sharedMemories(s,otherId,id),assessment:{status,canRequest,topics,basis}});
+      const advice=await this.agents.advise({participant:a,memories:this.memoryStore.records(s,id),other:publicProfile(b),shareableMemories:this.sharedMemories(s,otherId,id),assessment:{status,canRequest,topics,basis,conclusion:review.reason}});
       await this.repo.transact(d=>{requireValue(ids.every(id=>participant(d,id).revision===revisions[id]&&!participant(d,id).understandingPending),'This understanding changed. Ask Astrid again.',409);d.browseAdvice??=[];d.browseAdvice.push({id:uid('advice'),participantId:id,otherId,reviewId:review.id,revisions,status,topics,text:textValue(advice.text,2400),metadata:advice.metadata,createdAt:now()});});
       return {other:publicProfile(b),assessment:{status,text:advice.text,canRequest,reviewId:review.id,revisions,proposalId:existing?.id}};
     } finally {this.browseBusy.delete(key);}

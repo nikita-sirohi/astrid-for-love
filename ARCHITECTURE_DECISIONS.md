@@ -64,7 +64,7 @@ Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Se
 - [Matchy v0.9.1](prompts/matchy/v0.9.1.md)
 - [Memy v0.7.1](prompts/memy/v0.7.1.md)
 
-See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.11.1](prompts/runtime/v0.11.1.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.12.0](prompts/runtime/v0.12.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 
@@ -201,6 +201,8 @@ Both acceptances persist before Astrid generates a shared opening from public pr
 
 ## AD-024: Evidence refresh and preserving the person
 
-Selected roles are Astrid v0.9.0, Memy v0.7.1 and Matchy v0.9.1 with runtime v0.11.1. All three retain consequential edges: unusual expectations, strong requirements, humor and contradictions must survive extraction, compact lore and pair synthesis. Matchy weighs concrete alignments and tensions across beliefs and private stories, revisiting prior questions instead of inheriting them as facts. Astrid grounds each safe handoff in the cited own expectation rather than substituting a generic question about the topic.
+Selected roles are Astrid v0.9.0, Memy v0.7.1 and Matchy v0.9.1 with runtime v0.12.0. All three retain consequential edges: unusual expectations, strong requirements, humor and contradictions must survive extraction, compact lore and pair synthesis. Matchy weighs concrete alignments and tensions across beliefs and private stories, revisiting prior questions instead of inheriting them as facts. Astrid grounds each safe handoff in the cited own expectation rather than substituting a generic question about the topic.
 
 Retrospective lore refresh uses the entire own transcript after the user-control context cutoff. Existing unlocked records can be refined using their recorded evidence even when the original messages are outside that window; inaccessible historical evidence cannot create a new record. No profile or clarification replay occurs. Memy’s successful commit is durable even if its final acknowledgement fails.
+
+Browsing assessments may explain high-level pair compatibility conclusions: concrete alignments, tensions, and differences in expectations. Astrid receives the current pair conclusion for this purpose; raw counterpart records and specific private stories remain separately scoped. This permission does not change the personality-first proposal or shared-opening flow.

@@ -18,7 +18,7 @@ test('application prompt keeps role examples, replaces laboratory limitations, a
   assert.doesNotMatch(prompt.instructions, /local prompt laboratory|No application tools are available/);
   assert.match(prompt.instructions, /one bounded application task/);
   assert.equal(prompt.hash.length, 64);
-  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.11.1.md');
+  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.12.0.md');
 });
 
 test('converse whitelists own context and strips private matching rationale from clarifications', async () => {
@@ -288,4 +288,12 @@ test('matching handoffs may use own story context, but never another person’s 
  await adapter(review).review({participants:[person,other],memories:[story],phase:'preliminary'});
  await assert.rejects(adapter(review).review({participants:[person,other],memories:[{...story,participantId:'b'}],phase:'preliminary'}),/Invalid agent evidence/);
  await adapter(output(),request=>{const {context}=JSON.parse(request.input[0].content);assert.equal(context.clarifications[0].ownEvidence[0].id,'own-story');}).converse({...input,memories:[story],clarifications:[{...review.clarifications[0],id:'q',status:'queued'}]});
+});
+
+
+test('browsing receives the authorized pair conclusion without raw counterpart records',async()=>{
+ const conclusion='Shared appetite for independent projects; different expectations about spending.';
+ await adapter({text:'A possible connection with a real spending tension.'},request=>{
+  const c=JSON.parse(request.input[0].content).context;assert.equal(c.assessment.conclusion,conclusion);assert.ok(c.memories.every(m=>m.participantId===person.id));assert.ok(!JSON.stringify(c).includes('PRIVATE TRANSCRIPT'));
+ }).advise({participant:person,other,memories:[memory,{...memory,id:'foreign',participantId:other.id,text:'PRIVATE TRANSCRIPT'}],assessment:{status:'explore',canRequest:false,topics:[],basis:'preliminary',conclusion}});
 });

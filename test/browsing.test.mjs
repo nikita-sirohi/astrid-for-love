@@ -51,7 +51,7 @@ test('missing baseline and known firm conflicts hold and cannot request an intro
   await assert.rejects(app.browseInterest('maya', 'theo', firm.assessment.reviewId), conflict);
 });
 
-test('advice receives neither counterpart private memories nor private pair rationale', async t => {
+test('advice receives the authorized pair conclusion but no raw counterpart memories', async t => {
   let received;
   const { app, repository } = await setup(t, { advise: async context => { received = context; return { text: 'I think this is worth exploring.' }; } });
   await repository.transact(state => {
@@ -61,7 +61,7 @@ test('advice receives neither counterpart private memories nor private pair rati
   });
   await app.browseAdvice('eli', 'elena');
   assert.ok(!JSON.stringify(received).includes('COUNTERPART PRIVATE STORY'));
-  assert.ok(!JSON.stringify(received).includes('PRIVATE PAIR REASON'));
+  assert.equal(received.assessment.conclusion,'PRIVATE PAIR REASON');
   assert.deepEqual(received.assessment.topics, [{ facet: 'closeness.time', purpose: 'baseline', evidenceIds: ['eli-closeness'] }]);
   assert.ok(received.memories.every(memory => memory.participantId === 'eli'));
 });

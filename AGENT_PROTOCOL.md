@@ -94,7 +94,7 @@ See [DEMO_WALKTHROUGH.md](DEMO_WALKTHROUGH.md) for the implemented lifecycle. A 
 
 ## Implemented Memy handoff
 
-The current app runs Memy v0.7.1 before Astrid v0.9.0, with Matchy v0.9.1 and runtime v0.11.1. `understand(ownContext)` returns atomic memory suggestions with user evidence IDs, explicit profile updates, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. Matchy handoffs carry the exact facet, purpose and recipient-owned evidence IDs; the application derives safe uncertainty/completion text from the purpose and facet definitions and includes evidence revisions. No free-form private pair assessment enters Astrid’s context. Memy’s answered disposition needs latest-user evidence for that facet, not simply another fact in the same broad topic.
+The current app runs Memy v0.7.1 before Astrid v0.9.0, with Matchy v0.9.1 and runtime v0.12.0. `understand(ownContext)` returns atomic memory suggestions with user evidence IDs, explicit profile updates, clarification updates, and `gaps: [{topic, reason}]`. Application commit precedes `converse(freshOwnContext, understanding.gaps)`, which returns only a reply and exact-recipient permission requests. Memy has no other participant records, recipient list, or candidate rationale. Matchy handoffs carry the exact facet, purpose and recipient-owned evidence IDs; the application derives safe uncertainty/completion text from the purpose and facet definitions and includes evidence revisions. No free-form private pair assessment enters Astrid’s context. Memy’s answered disposition needs latest-user evidence for that facet, not simply another fact in the same broad topic.
 
 ## Personality handoff
 
@@ -121,3 +121,5 @@ After both acceptances persist, Astrid receives a bounded shared-opening task wi
 ### Preserve consequential meaning
 
 Current role prompts retain unusual requirements, bluntness and contradictions rather than converting them into generic kindness or growth. Matchy synthesizes current evidence before choosing follow-ups and discards obsolete earlier questions. Clarification purposes include priority and enjoyment alongside baseline, meaning, practical, flexibility, reciprocity and repair. Astrid uses the cited recipient-owned records to preserve the actual question; no counterpart details or free-form pair rationale cross that boundary.
+
+Browsing assessments may explain high-level pair compatibility conclusions: concrete alignments, tensions, and differences in expectations. Astrid receives the current pair conclusion for this purpose; raw counterpart records and specific private stories remain separately scoped. This permission does not change the personality-first proposal or shared-opening flow.

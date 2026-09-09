@@ -7,7 +7,7 @@ These versioned behavioral prompts run within the application’s bounded agent 
 | Astrid | [v0.9.0](astrid/v0.9.0.md) | Conversation and participant-facing matchmaking |
 | Matchy | [v0.9.1](matchy/v0.9.1.md) | Private background compatibility reviews |
 | Memy | [v0.7.1](memy/v0.7.1.md) | Evidence-backed understanding and memory |
-| Runtime | [v0.11.1](runtime/v0.11.1.md) | Application tasks, tools and output contracts |
+| Runtime | [v0.12.0](runtime/v0.12.0.md) | Application tasks, tools and output contracts |
 
 Astrid's selected companion is [conversation examples v0.3.0](astrid/examples.v0.3.0.md). The agents use the semantic handoff contract in [AGENT_PROTOCOL.md](../AGENT_PROTOCOL.md), currently v0.1.0. Earlier role drafts remain available for comparison.
 
@@ -53,7 +53,7 @@ Memy v0.1.0 owns understanding extraction and advisory gaps. Astrid v0.8.0 remov
 
 ## Current application contracts
 
-Astrid v0.9.0, Memy v0.7.1, Matchy v0.9.1, runtime v0.11.1. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
+Astrid v0.9.0, Memy v0.7.1, Matchy v0.9.1, runtime v0.12.0. Memy extracts independent facet beliefs and explicit profile facts; Matchy requests specific recipient-owned semantic clarification; Astrid uses committed understanding. Earlier versions remain frozen. Store run-specific results under ignored .local/, not tracked findings documents.
 
 Matchy v0.6.0 distinguishes ordinary uncertainty that permits exploration from firm conflicts and incomplete baselines that hold introductions. Runtime v0.4.0 adds Astrid’s participant-safe browsing advice task; it receives public profile information, authorized stories, and recipient-owned discussion topics, never the private pair rationale.
 
@@ -67,4 +67,6 @@ Memy v0.6.0 classifies substantive topic understanding separately from incidenta
 
 Runtime v0.10.0 distinguishes a preliminary compatibility assessment from introduction permission. Browsing can show an exploratory assessment while consent controls remain unavailable; empty counterpart profiles are identified without re-interviewing the established participant.
 
-Astrid v0.9.0, Memy v0.7.1, Matchy v0.9.1 and runtime v0.11.1 preserve unusual requirements, blunt preferences and contradictions without replacing them with generic warmth. Memy performs an evidence-backed retrospective refresh of lore; Matchy privately uses stories as compatibility evidence while excluding them from readiness counts. Reviews reassess earlier assumptions and prioritize consequential alignment and tension. Recipient-safe handoffs add priority and enjoyment purposes grounded in the recipient’s own records. The lore refresh endpoint now reprocesses understanding rather than invoking the earlier display-only summarize task.
+Astrid v0.9.0, Memy v0.7.1, Matchy v0.9.1 and runtime v0.12.0 preserve unusual requirements, blunt preferences and contradictions without replacing them with generic warmth. Memy performs an evidence-backed retrospective refresh of lore; Matchy privately uses stories as compatibility evidence while excluding them from readiness counts. Reviews reassess earlier assumptions and prioritize consequential alignment and tension. Recipient-safe handoffs add priority and enjoyment purposes grounded in the recipient’s own records. The lore refresh endpoint now reprocesses understanding rather than invoking the earlier display-only summarize task.
+
+Browsing assessments may explain high-level pair compatibility conclusions: concrete alignments, tensions, and differences in expectations. Astrid receives the current pair conclusion for this purpose; raw counterpart records and specific private stories remain separately scoped. This permission does not change the personality-first proposal or shared-opening flow.
