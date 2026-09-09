@@ -16,9 +16,9 @@ test('pending or failed understanding blocks second acceptance until extraction 
  await assert.rejects(app.decision('elena',p.id,'accepted'),/still being updated/);
  app.agents.understand=async()=>empty();await app.converse('eli','Please continue.');const accepted=await app.decision('elena',p.id,'accepted');assert.ok(accepted.chat);
 });
-test('new private story preserves an existing yes and is committed before the reply',async t=>{
+test('new private story invalidates an old assessment while preserving the recorded yes',async t=>{
  const {app,repository}=await setup(t,{understand:async ctx=>({...empty(),stories:[{id:null,storyType:'anecdote',text:'I made a paper lantern shaped like a squid.',status:'confirmed',evidenceIds:[ctx.messages.at(-1).id]}]}),converse:async ctx=>{assert.ok(ctx.memories.some(m=>m.kind==='story'));return {reply:'What inspired the squid?',permissions:[]};}});
- const p=await proposal(app);await app.converse('eli','I made a paper lantern shaped like a squid.');const current=(await repository.read()).proposals.find(x=>x.id===p.id);assert.equal(current.status,'pending');assert.equal(current.decisions.eli,'accepted');assert.ok((await app.decision('elena',p.id,'accepted')).chat);
+ const p=await proposal(app);await app.converse('eli','I made a paper lantern shaped like a squid.');const current=(await repository.read()).proposals.find(x=>x.id===p.id);assert.equal(current.status,'stale');assert.equal(current.decisions.eli,'accepted');assert.ok((await repository.read()).jobs.some(j=>j.participantId==='eli'&&j.status==='queued'));await assert.rejects(app.decision('elena',p.id,'accepted'));
 });
 test('twenty beliefs cannot crowd out a valid story in the same extraction',async t=>{
  const {app,repository}=await setup(t,{understand:async ctx=>{const evidenceIds=[ctx.messages.at(-1).id];return {...empty(),memories:Array.from({length:20},(_,i)=>({topic:'dating',facet:'dating.intent',text:`Distinct belief ${i}`,status:'confirmed',strength:'prefers',evidenceIds})),stories:[{storyType:'passion',text:'I collect broken umbrellas.',status:'confirmed',evidenceIds}]};}});await app.converse('eli','A deliberately large extraction fixture.');assert.equal((await repository.read()).memories.filter(m=>m.participantId==='eli'&&m.kind==='story').length,1);

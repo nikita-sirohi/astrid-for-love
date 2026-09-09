@@ -18,7 +18,7 @@ test('application prompt keeps role examples, replaces laboratory limitations, a
   assert.doesNotMatch(prompt.instructions, /local prompt laboratory|No application tools are available/);
   assert.match(prompt.instructions, /one bounded application task/);
   assert.equal(prompt.hash.length, 64);
-  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.10.0.md');
+  assert.equal(prompt.assets.at(-1).file, 'runtime/v0.11.1.md');
 });
 
 test('converse whitelists own context and strips private matching rationale from clarifications', async () => {
@@ -33,7 +33,7 @@ test('converse whitelists own context and strips private matching rationale from
   const result = await agents.converse({ ...input, memories: [...input.memories, { ...memory, id: 'other', participantId: 'b', text: 'OTHER SECRET' }],
     messages: [...input.messages, { ...message, chatId: 'shared', text: 'OTHER SECRET' }],
     clarifications: [{ id: 'q', participantId: 'a', topic: 'family', facet: 'family.household', status: 'queued', reason: 'OTHER SECRET' }] });
-  assert.equal(result.metadata.prompt.version, '0.8.0');
+  assert.equal(result.metadata.prompt.version, '0.9.0');
   assert.equal(result.metadata.responseId, 'test-response');
 });
 
@@ -115,7 +115,7 @@ test('offline family conversation records evidence and answers own queued work o
 
 test('Memy has a standalone versioned prompt and only receives own authorized understanding', async () => {
   const prompt = await applicationPrompt('memy');
-  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.6.0.md']);
+  assert.deepEqual(prompt.assets.map(asset => asset.file), ['memy/v0.7.1.md']);
   assert.match(prompt.instructions, /before Astrid's reply/);
   const result = await adapter(understanding(), request => {
     const { context } = JSON.parse(request.input[0].content);
@@ -131,7 +131,7 @@ test('Memy has a standalone versioned prompt and only receives own authorized un
     messages: [...input.messages, { ...message, chatId: 'astrid-b', authorId: 'b', text: 'OTHER SECRET' }],
     clarifications: [{ id: 'q', participantId: 'b', topic: 'family', facet: 'family.household', status: 'queued', reason: 'OTHER SECRET' }] });
   assert.equal(result.metadata.prompt.role, 'memy');
-  assert.equal(result.metadata.prompt.version, '0.6.0');
+  assert.equal(result.metadata.prompt.version, '0.7.1');
 });
 
 test('Astrid receives compact gap briefing but cannot produce understanding mutations', async () => {
@@ -235,4 +235,57 @@ test('lore summaries use only own records and reject missing, foreign or oversiz
     assert.deepEqual(Object.keys(context),['memories']);assert.equal(context.memories.length,1);assert.ok(!JSON.stringify(context).includes('OTHER SECRET'));
   }).summarize(args);
   for(const summaries of [[],[{id:'foreign',summary:'Bad'}],[{id:memory.id,summary:'x'.repeat(111)}]])await assert.rejects(adapter({summaries}).summarize(args),/Invalid agent/);
+});
+
+test('Matchy receives pair stories as private evidence without counting them for readiness', async () => {
+  const story = { id: 'story-a', participantId: 'a', kind: 'story', storyType: 'passion', topic: null, facet: null, text: 'Making a elaborate garden for pleasure, with no plan to sell the produce.', status: 'confirmed', evidenceIds: ['msg-1'] };
+  const review = { decision: 'needs_clarification', exploration: 'hold', reason: 'Their priorities deserve exploration.', evidenceIds: ['story-a','mem-1'], clarifications: [{participantId:'a',topic:'ambition',facet:'ambition.work',purpose:'practical',evidenceIds:[]}] };
+  await adapter(review, request => {
+    const {context} = JSON.parse(request.input[0].content);
+    assert.ok(context.memories.some(record => record.id === story.id));
+    assert.ok(!context.memories.some(record => record.id === 'foreign-story'));
+    assert.equal(context.topicUnderstanding.a.ambition.status, 'not_discussed');
+  }).review({participants:[person,other],memories:[memory,story,{...story,id:'foreign-story',participantId:'c'}],phase:'preliminary'});
+});
+
+test('retrospective understanding can revisit earlier stories and existing evidence but cannot replay profile or consent-like changes', async () => {
+  const earlier = { ...message, id: 'early', text: 'I spend my free time making pottery.' };
+  const story = {id:'story-a',participantId:'a',kind:'story',storyType:'passion',text:earlier.text,status:'confirmed',evidenceIds:['early']};
+  const result = {...understanding(),stories:[{id:'story-a',storyType:'passion',text:'Enjoys making pottery.',status:'confirmed',evidenceIds:['early']}]};
+  await adapter(structuredClone(result), request => assert.equal(JSON.parse(request.input[0].content).context.retrospective,true)).understand({...input,memories:[story],retrospective:true});
+  await assert.rejects(adapter(structuredClone(result)).understand({...input,memories:[story],messages:[earlier,message]}),/Invalid agent evidence/);
+  await assert.rejects(adapter({...understanding(),stories:[{...result.stories[0],id:null}]}).understand({...input,memories:[story],retrospective:true}),/Invalid agent evidence/);
+  await assert.rejects(adapter({...understanding(),profileUpdates:[{field:'age',value:'27',correction:false,evidenceIds:['msg-1']}]}).understand({...input,retrospective:true}),/Invalid agent evidence/);
+  await assert.rejects(adapter(structuredClone(result)).understand({...input,memories:[{...story,userLocked:true}],retrospective:true}),/Invalid agent evidence/);
+});
+
+test('handoff evidence is grounded in authorized own records, never incoming focus prose', async () => {
+  const clarification = {id:'q',participantId:'a',topic:'dating',facet:'dating.intent',purpose:'priority',status:'queued',evidenceIds:['mem-1','other-memory'],ownEvidence:[{id:'other-memory',text:'OTHER SECRET'}]};
+  const memories = [memory,{...memory,id:'other-memory',participantId:'b',text:'OTHER SECRET'}];
+  await adapter(output(),request=>{
+    const {context}=JSON.parse(request.input[0].content);
+    assert.deepEqual(context.clarifications[0].ownEvidence,[{id:'mem-1',text:memory.text,status:'confirmed',strength:'prefers'}]);
+    assert.ok(!JSON.stringify(context).includes('OTHER SECRET'));
+  }).converse({...input,memories,clarifications:[clarification]});
+  await adapter({text:'Worth exploring.'},request=>{
+    const {context}=JSON.parse(request.input[0].content);
+    assert.deepEqual(context.assessment.topics[0].ownEvidence,[{id:'mem-1',text:memory.text,status:'confirmed',strength:'prefers'}]);
+    assert.ok(!JSON.stringify(context).includes('OTHER SECRET'));
+  }).advise({...input,memories,other,assessment:{status:'explore',canRequest:false,topics:[clarification]}});
+});
+
+test('retrospective reclassifies an unlocked belief in place while ordinary turns and locks protect its facet', async () => {
+ const change={...memory,topic:'convictions',facet:'convictions.flexibility',readiness:'understood'};delete change.participantId;
+ const batch=()=>({...understanding(),memories:[structuredClone(change)]});
+ const result=await adapter(batch()).understand({...input,retrospective:true});assert.equal(result.memories[0].id,'mem-1');assert.equal(result.memories[0].facet,'convictions.flexibility');
+ await assert.rejects(adapter(batch()).understand(input),/Invalid agent evidence/);
+ await assert.rejects(adapter(batch()).understand({...input,retrospective:true,memories:[{...memory,locked:true}]}),/Invalid agent evidence/);
+});
+
+test('matching handoffs may use own story context, but never another person’s story', async () => {
+ const story={...memory,id:'own-story',kind:'story',storyType:'passion',topic:'story',facet:null};
+ const review={decision:'needs_clarification',exploration:'hold',reason:'Explore competing priorities.',evidenceIds:['own-story'],clarifications:[{participantId:'a',topic:'ambition',facet:'ambition.work',purpose:'priority',evidenceIds:['own-story']}]};
+ await adapter(review).review({participants:[person,other],memories:[story],phase:'preliminary'});
+ await assert.rejects(adapter(review).review({participants:[person,other],memories:[{...story,participantId:'b'}],phase:'preliminary'}),/Invalid agent evidence/);
+ await adapter(output(),request=>{const {context}=JSON.parse(request.input[0].content);assert.equal(context.clarifications[0].ownEvidence[0].id,'own-story');}).converse({...input,memories:[story],clarifications:[{...review.clarifications[0],id:'q',status:'queued'}]});
 });

@@ -179,7 +179,7 @@ function renderKnowledge() {
   const memories=data.memories.filter(m=>!m.deleted).sort((a,b)=>(a.kind==='story')-(b.kind==='story')||(b.strength==='requires')-(a.strength==='requires'));
   const list=el('ul','lore-list');
   const add=(memory,parent)=>{
-    const row=el('li','lore-note');const words=memory.text.split(/\s+/);const brief=memory.summary||(words.length>12?words.slice(0,12).join(' ')+'…':memory.text);const text=button(brief,'lore-text',()=>memoryDialog(memory));text.title='Edit this note';
+    const row=el('li','lore-note');const words=memory.text.split(/\s+/);const brief=memory.summary||memory.text;const text=button(brief,'lore-text',()=>memoryDialog(memory));text.title='Edit this note';
     if(memory.status!=='confirmed')row.append(el('span','lore-uncertain','Still getting this right · '));
     row.append(text,button('×','remove-note',()=>removeMemory(memory)));parent.append(row);
   };
@@ -187,6 +187,7 @@ function renderKnowledge() {
   if(memories.length>6){const more=el('details','more-lore');more.append(el('summary','',`A few more notes (${memories.length-6})`));const rest=el('ul','lore-list');memories.slice(6).forEach(m=>add(m,rest));more.append(rest);target.append(more);}
   if(!memories.length)target.append(el('p','','A good story is a good place to start.'));
   target.append(button('+ Add a note','text-button',()=>memoryDialog()),el('span','',' · '),button('+ Add a story','text-button',()=>memoryDialog({kind:'story',storyType:'anecdote',status:'confirmed'})));
+  const revisit=button('Revisit your lore','text-button',async event=>{event.currentTarget.disabled=true;event.currentTarget.textContent='Revisiting…';try{await api(`/api/participants/${activeId}/lore/refresh`,{method:'POST',body:{}});assessments.clear();await refresh(true);}catch(error){showError(error.message);}finally{knowledgeSignature='';renderKnowledge();}});revisit.disabled=data.busy;target.append(revisit);
   const settings=el('details','more-lore');settings.append(el('summary','','Matching & sharing'),button('Preferences & visibility','text-button',profileDialog));target.append(settings);
 }
 function renderPotentials() {

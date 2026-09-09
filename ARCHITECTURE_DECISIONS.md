@@ -60,11 +60,11 @@ A separate presenter view exposes concise decision evidence, pending jobs, and l
 
 Accepted. Keep role prompts in separate, explicitly versioned Markdown files. Selected versions are drafts:
 
-- [Astrid v0.8.0](prompts/astrid/v0.8.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
-- [Matchy v0.8.0](prompts/matchy/v0.8.0.md)
-- [Memy v0.6.0](prompts/memy/v0.6.0.md)
+- [Astrid v0.9.0](prompts/astrid/v0.9.0.md), with [conversation examples v0.3.0](prompts/astrid/examples.v0.3.0.md)
+- [Matchy v0.9.1](prompts/matchy/v0.9.1.md)
+- [Memy v0.7.1](prompts/memy/v0.7.1.md)
 
-See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.10.0](prompts/runtime/v0.10.0.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
+See [prompt versioning rules](prompts/README.md). Both runtimes select explicit versions and record hashes with executions; the application adds [runtime overlay v0.11.1](prompts/runtime/v0.11.1.md). Prompts are behavioral instructions; tool contracts, authorization, persistence, and job execution belong in code.
 
 ## AD-008 — Demo-first validation
 
@@ -144,16 +144,16 @@ Advice and interest bind to reviewed participant revisions. Interest records one
 
 ## Personality without readiness inflation
 
-Memy records distinctive passions, actual anecdotes, and humor separately from compatibility beliefs. These story records use the existing transactional FileMemoryStore and memory controls, distinguished by `kind: story` and no relationship facet. They enrich Astrid's own conversational recall and permission-authorized introduction material, but cannot satisfy baseline readiness or serve as Matchy's compatibility evidence. Current names, photos, bios and interests are not automatically rewritten from stories. No invented biography is used to fill empty profiles.
+Memy records distinctive passions, actual anecdotes, and humor separately from compatibility beliefs. These story records use the existing transactional FileMemoryStore and memory controls, distinguished by `kind: story` and no relationship facet. They enrich Astrid's own conversational recall and permission-authorized introduction material, and inform Matchy’s private compatibility assessment, but cannot satisfy baseline readiness. Sharing them with another participant still requires permission. Current names, photos, bios and interests are not automatically rewritten from stories. No invented biography is used to fill empty profiles.
 
-Stories require latest-user evidence; recording a possible introduction hook never authorizes disclosure. User edits revoke prior grants and protect records, and deletion removes active context while preserving owner history. Semantically detecting a paraphrase of a locked or deleted story remains a model responsibility, as it is for beliefs; application enforcement protects IDs, evidence scope and context cutoffs.
+New conversational stories require latest-user evidence; retrospective refresh can use any supplied authorized own evidence. Recording a possible introduction hook never authorizes disclosure. User edits revoke prior grants and protect records, and deletion removes active context while preserving owner history. Semantically detecting a paraphrase of a locked or deleted story remains a model responsibility, as it is for beliefs; application enforcement protects IDs, evidence scope and context cutoffs.
 
 
 ## Foundation review decisions
 
 Persist `understandingPending` with a new private user message, clear it only after Memy changes commit, and block proposal publication/acceptance while either participant has unresolved extraction. Failed extraction is recoverable through the saved-turn retry or a subsequent private turn. Reviews encountering pending understanding defer matching until it finishes.
 
-Maintain current pending proposal acceptances when a turn only adds new private stories; advance their participant revision alongside the context revision, since no compatibility or previously disclosed content changed. Other memory mutations retain conservative invalidation. This is a narrow exception, not a full split of context, compatibility and disclosure versions.
+All memory changes, including newly added private stories, invalidate pending proposals and enqueue matching. Stories now contribute to compatibility judgment, so carrying forward proposal acceptances across story changes would preserve an outdated assessment.
 
 A current-version recipient-specific denial overrides broad shareable status. Model revisions reset general sharing to private; exact-recipient grants remain tied to the prior record revision. Background introductions retain the uncertainty of all authorized memory material. Story edits preserve tentative status unless the owner explicitly confirms it.
 
@@ -164,7 +164,7 @@ Remaining intentional demo limits: topic readiness depends on evidence classific
 
 Matchy can compare incomplete profiles after both people have explicit adult/mutual eligibility and at least three confirmed relationship beliefs across two topics each. Missing or different location permits a preliminary comparison but still blocks introductions. Stories and tentative beliefs do not count toward this threshold. Preliminary reviews select consequential recipient-owned facets for Astrid to explore; they cannot publish a proposal or allow an introduction. The existing baseline and consent checks apply to full reviews. The three-belief threshold is a demo heuristic, not a compatibility score.
 
-Memy stores concise key learnings with a separate short summary (maximum 110 characters) for the lore UI. Clarifications of the same expectation should revise its unlocked record instead of accumulating recaps. Full text, evidence, uncertainty and independent boundaries remain available for correction and matching. Existing records can receive display-only compression through POST /api/participants/:id/lore/refresh; results are scoped to the owner and skipped if source records changed during generation. This does not alter belief revisions, sharing permissions or readiness. User text edits clear stale summaries. Stories sort after preferences in the compact panel.
+Memy stores concise key learnings with a separate short summary (maximum 110 characters) for the lore UI. Clarifications of the same expectation should revise its unlocked record instead of accumulating recaps. Full text, evidence, uncertainty and independent boundaries remain available for correction and matching. POST /api/participants/:id/lore/refresh now runs Memy over the full authorized private conversation and surviving records to reconcile evidence, beliefs, readiness and summaries. It preserves chat history and profile facts, respects locks and deletion barriers, and rejects concurrent participant revisions. Successful commits invalidate prior assessments and pending proposals and enqueue matching. Updated records receive ordinary versioned sharing protection. User text edits clear stale summaries. Stories sort after preferences in the compact panel.
 
 The composer clears immediately and renders the pending message. Failed requests check whether the server already saved the message before restoring a draft, preserving newer text and drafts in other conversations.
 
@@ -179,7 +179,7 @@ POST /api/participants/:id/clear clears only that participant's identity fields,
 
 The live application uses a shared Responses function-calling runner, limited to six model steps, eight tool calls and 120 seconds per run. It replays response items and tool receipts, including encrypted reasoning items, within the run. Unknown tools and invalid arguments cannot execute. Repeated call IDs reuse receipts; conflicting reuse fails. No automatic provider retry or durable mid-run resume is implemented.
 
-Astrid can inspect safe match dispositions, queue matching and request exact-recipient sharing permission. Memy can inspect records/evidence and commit one validated understanding batch before Astrid speaks. A successful commit survives a later model failure. Matchy can inspect relationship records and check a decision against evidence/readiness before returning its final disposition. Pair scheduling and publication remain application-controlled. The runner is intentionally bounded; agents do not repeatedly invoke each other while waiting for people. Successful-run metadata records step count and tool outcomes, not raw tool arguments or private reasoning.
+Astrid can inspect safe match dispositions, queue matching and request exact-recipient sharing permission. Memy can inspect records/evidence and commit one validated understanding batch before Astrid speaks. A successful commit survives a later model failure. Matchy can inspect relationship beliefs and private stories and check a decision against evidence/readiness before returning its final disposition. Pair scheduling and publication remain application-controlled. The runner is intentionally bounded; agents do not repeatedly invoke each other while waiting for people. Successful-run metadata records step count and tool outcomes, not raw tool arguments or private reasoning.
 
 ## AD-021: Configurable fresh profile pools
 
@@ -189,7 +189,7 @@ Startup accepts --profiles (1–12), --store (a JSON file), --port and --mode. N
 
 A topic is understood when it has substantive confirmed evidence marked understood by Memy; incidental details and stories do not count. Tentative or explicitly unresolved evidence yields needs-exploration when no understood record exists. An unresolved sibling record does not mechanically erase topic credit: Matchy must judge whether it prevents this particular introduction. The seven-topic gate replaces the sixteen-facet checklist without removing the detailed expectations from review context.
 
-Clarification purpose is one of baseline, meaning, practical, flexibility, reciprocity, or repair. Astrid receives the purpose, facet and revision-pinned own evidence, then chooses natural wording and timing. Private counterpart rationale and model-written handoff prose are not forwarded.
+Clarification purpose is one of baseline, meaning, practical, flexibility, reciprocity, repair, priority, or enjoyment. Astrid receives the purpose, facet and revision-pinned own evidence, then chooses natural wording and timing. Private counterpart rationale and model-written handoff prose are not forwarded.
 
 ## AD-023: Recovery, fresh assessments, and shared openings
 
@@ -198,3 +198,9 @@ Private user messages persist application-stage progress. Retrying the latest fa
 Browser assessments carry both participants' revisions and pending-understanding state. Changes on either side evict cached advice; request generations and sequences prevent late responses from restoring stale results after refresh or reset.
 
 Both acceptances persist before Astrid generates a shared opening from public profiles and currently authorized records. Publication rechecks consent, eligibility, revisions and the authorized context. Concurrent attempts coalesce; a failed opening leaves both acceptances available for explicit retry. Chat creation, opening and departure are committed together, and later shared messages never enter agent context.
+
+## AD-024: Evidence refresh and preserving the person
+
+Selected roles are Astrid v0.9.0, Memy v0.7.1 and Matchy v0.9.1 with runtime v0.11.1. All three retain consequential edges: unusual expectations, strong requirements, humor and contradictions must survive extraction, compact lore and pair synthesis. Matchy weighs concrete alignments and tensions across beliefs and private stories, revisiting prior questions instead of inheriting them as facts. Astrid grounds each safe handoff in the cited own expectation rather than substituting a generic question about the topic.
+
+Retrospective lore refresh uses the entire own transcript after the user-control context cutoff. Existing unlocked records can be refined using their recorded evidence even when the original messages are outside that window; inaccessible historical evidence cannot create a new record. No profile or clarification replay occurs. Memy’s successful commit is durable even if its final acknowledgement fails.

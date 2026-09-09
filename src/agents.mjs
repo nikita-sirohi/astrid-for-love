@@ -45,7 +45,7 @@ function validate(value, schema) {
     && (!schema.minLength || value.trim().length >= schema.minLength) && (!schema.maxLength || value.length <= schema.maxLength);
 }
 
-export async function applicationPrompt(role, version = role === 'memy' ? '0.6.0' : selectedVersions[role]) {
+export async function applicationPrompt(role, version = role === 'memy' ? '0.7.1' : selectedVersions[role]) {
   if (role === 'memy') {
     if (!/^\d+\.\d+\.\d+$/.test(version)) throw new Error('Invalid Memy prompt version.');
     const file = `memy/v${version}.md`;
@@ -58,9 +58,9 @@ export async function applicationPrompt(role, version = role === 'memy' ? '0.6.0
   const boundary = '\n\nRuntime mode: local prompt laboratory.';
   const index = lab.instructions.lastIndexOf(boundary);
   if (index < 0) throw new Error('Application prompt assembly failed.');
-  const overlay = await readFile(new URL('../prompts/runtime/v0.10.0.md', import.meta.url), 'utf8');
+  const overlay = await readFile(new URL('../prompts/runtime/v0.11.1.md', import.meta.url), 'utf8');
   const instructions = lab.instructions.slice(0, index) + '\n\n' + overlay.split('## Prompt body\n')[1];
-  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.10.0.md', hash: hash(overlay) }], hash: hash(instructions) };
+  return { instructions, assets: [...lab.assets, { file: 'runtime/v0.11.1.md', hash: hash(overlay) }], hash: hash(instructions) };
 }
 
 export async function structuredResponse({ key, model, instructions, input, schema, task, tools = [], fetchImpl = fetch, timeoutMs = 120000 }) {
@@ -92,6 +92,7 @@ const publicProfile = value => pick(value, ['id', 'name', 'age', 'gender', 'pron
 const ownProfile = value => ({ ...publicProfile(value), ...pick(value, ['interestedIn', 'matchingEnabled', 'revision', 'ageRange', 'profileFieldLocks']),
   profileConflicts: (value.profileConflicts || []).map(item => pick(item, ['field', 'proposedValue', 'evidenceIds'])) });
 const cleanMemory = value => pick(value, ['id', 'participantId', 'kind', 'storyType', 'topic', 'facet', 'text', 'readiness', 'status', 'strength', 'sharing', 'evidenceIds', 'revision', 'userLocked', 'locked']);
+const ownEvidence = (memories, evidenceIds) => memories.filter(memory => evidenceIds.includes(memory.id)).map(memory => pick(memory, ['id', 'text', 'status', 'strength']));
 const ownMemories = (memories, id) => memories.filter(memory => memory.participantId === id && !memory.deleted).map(cleanMemory);
 const ownMessages = (messages, id) => messages.filter(message => message.chatId === `astrid-${id}`
   && (message.authorId === id || message.authorId === 'astrid' || message.authorId === 'system'))
@@ -103,7 +104,7 @@ function contextFor(task, args) {
   if (task === 'review') {
     if (args.participants.length !== 2) throw new Error('Matching requires exactly two participants.');
     const ids = args.participants.map(person => person.id);
-    return { facets, topicUnderstanding:Object.fromEntries(ids.map(id=>[id,topicUnderstanding({memories:args.memories},id)])), phase:args.phase||'full', missingFacets:args.missingFacets||[], participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted && memory.kind !== 'story').map(cleanMemory),
+    return { facets, topicUnderstanding:Object.fromEntries(ids.map(id=>[id,topicUnderstanding({memories:args.memories},id)])), phase:args.phase||'full', missingFacets:args.missingFacets||[], participants: args.participants.map(ownProfile), memories: args.memories.filter(memory => ids.includes(memory.participantId) && !memory.deleted).map(cleanMemory),
       previousReviews: (args.previousReviews || []).map(review => pick(review, ['decision', 'reason', 'evidenceIds', 'clarifications', 'revisions'])) };
   }
   if (task === 'advise') {
@@ -112,8 +113,8 @@ function contextFor(task, args) {
     const safeTopics = (args.assessment.topics || []).flatMap(item => {
       const def = facets.find(facet => facet.id === item.facet);
       if (!def) return [];
-      const evidenceIds = (item.evidenceIds || []).filter(id => memories.some(memory => memory.id === id && memory.facet === def.id));
-      return !item.evidenceIds?.length || evidenceIds.length ? [{ ...def, ...safeClarification({...item,evidenceIds}), evidenceIds }] : [];
+      const evidenceIds = (item.evidenceIds || []).filter(id => memories.some(memory => memory.id === id && (memory.kind === 'story' || memory.facet === def.id)));
+      return !item.evidenceIds?.length || evidenceIds.length ? [{ ...def, ...safeClarification({...item,evidenceIds}), evidenceIds, ownEvidence: ownEvidence(memories,evidenceIds) }] : [];
     });
     return { participant: ownProfile(args.participant), memories, other: publicProfile(args.other),
       shareableMemories: (args.shareableMemories || []).filter(memory => !memory.deleted && memory.participantId === args.other.id).map(cleanMemory),
@@ -129,10 +130,10 @@ function contextFor(task, args) {
     .map(item => {
       const def = facets.find(facet => facet.id === item.facet);
       if (!def || def.topic !== item.topic) return null;
-      const evidenceIds = (item.evidenceIds || []).filter(id => context.memories.some(memory => memory.id === id && memory.facet === def.id));
-      return safeClarification({...pick(item,['id','participantId','status','facet','purpose']),evidenceIds,memoryRevisions:Object.fromEntries(evidenceIds.map(id=>[id,context.memories.find(memory=>memory.id===id).revision??null]))});
+      const evidenceIds = (item.evidenceIds || []).filter(id => context.memories.some(memory => memory.id === id && (memory.kind === 'story' || memory.facet === def.id)));
+      return { ...safeClarification({...pick(item,['id','participantId','status','facet','purpose']),evidenceIds,memoryRevisions:Object.fromEntries(evidenceIds.map(id=>[id,context.memories.find(memory=>memory.id===id).revision??null]))}), ownEvidence: ownEvidence(context.memories,evidenceIds) };
     }).filter(Boolean) };
-  if (task === 'understand') return privateContext;
+  if (task === 'understand') return { ...privateContext, retrospective: args.retrospective === true };
   const gaps = (args.understanding?.gaps || []).filter(item => topics.includes(item.topic) && typeof item.reason === 'string')
     .slice(0, 2).map(item => ({ topic: item.topic, reason: item.reason.slice(0, 600) }));
   return { ...privateContext, understanding: { gaps }, permissionRecipients: (args.permissionRecipients || []).map(publicProfile) };
@@ -147,7 +148,7 @@ function validateReferences(task, data, context) {
     if (data.evidenceIds.some(id => !context.memories.some(memory => memory.id === id))) fail();
     if (data.clarifications.some(item => !context.participants.some(person => person.id === item.participantId)
       || !facets.some(def => def.id === item.facet && def.topic === item.topic)
-      || item.evidenceIds.some(id => !context.memories.some(memory => memory.id === id && memory.participantId === item.participantId && memory.facet === item.facet)))) fail();
+      || item.evidenceIds.some(id => !context.memories.some(memory => memory.id === id && memory.participantId === item.participantId && (memory.kind === 'story' || memory.facet === item.facet))))) fail();
     if (data.decision === 'needs_clarification' && !data.clarifications.length) fail();
     if (data.decision === 'propose' && context.participants.some(person => !context.memories.some(memory => memory.participantId === person.id && data.evidenceIds.includes(memory.id)))) fail();
   }
@@ -161,15 +162,17 @@ function validateReferences(task, data, context) {
   const userEvidence = new Set(context.messages.filter(message => message.role === 'user' && message.authorId === context.participant.id).map(message => message.id));
   const latestUser = context.messages.filter(message => message.role === 'user' && message.authorId === context.participant.id).at(-1);
   const latestEvidence = ids => ids.length > 0 && ids.every(id => id === latestUser?.id);
+  if (context.retrospective && (data.profileUpdates.length || data.clarificationUpdates.length)) fail();
+  const recordEvidence = record => new Set([...userEvidence, ...(context.retrospective && record.id ? context.memories.find(existing => existing.id === record.id)?.evidenceIds || [] : [])]);
   for (const memory of data.memories) {
-    if (!memory.evidenceIds.length || memory.evidenceIds.some(id => !userEvidence.has(id))) fail();
+    if (!memory.evidenceIds.length || memory.evidenceIds.some(id => !recordEvidence(memory).has(id))) fail();
     if (!facets.some(def => def.id === memory.facet && def.topic === memory.topic)) fail();
     if (memory.id && context.memoryTombstones.some(item => item.id === memory.id)) fail();
-    if (memory.id && !context.memories.some(existing => existing.id === memory.id && existing.topic === memory.topic && existing.facet === memory.facet && !existing.userLocked && !existing.locked)) fail();
+    if (memory.id && !context.memories.some(existing => existing.id === memory.id && existing.kind !== 'story' && (context.retrospective || (existing.topic === memory.topic && existing.facet === memory.facet)) && !existing.userLocked && !existing.locked)) fail();
     if (memory.id === null) delete memory.id;
   }
   for (const story of data.stories) {
-    if (!story.evidenceIds.length || story.evidenceIds.some(id => !userEvidence.has(id)) || !story.evidenceIds.includes(latestUser?.id)) fail();
+    if (!story.evidenceIds.length || story.evidenceIds.some(id => !recordEvidence(story).has(id)) || (!context.retrospective && !story.evidenceIds.includes(latestUser?.id))) fail();
     if (story.id && context.memoryTombstones.some(item => item.id === story.id)) fail();
     if (story.id && !context.memories.some(existing => existing.id === story.id && existing.kind === 'story' && !existing.userLocked && !existing.locked)) fail();
     if (story.id === null) delete story.id;
@@ -256,7 +259,7 @@ function scripted(task, context) {
 
 export function createAgents({ mode = 'live', client = structuredResponse, config, versions = selectedVersions, timeoutMs = 120000 } = {}) {
   if (!['live', 'offline'].includes(mode)) throw new Error('Unknown agent mode.');
-  const promptVersions = { ...selectedVersions, memy: '0.6.0', ...versions };
+  const promptVersions = { ...selectedVersions, memy: '0.7.1', ...versions };
   async function run(task, args) {
     const context = contextFor(task, args);
     const role = task === 'review' ? 'matchy' : ['understand','summarize'].includes(task) ? 'memy' : 'astrid';

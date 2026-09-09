@@ -45,7 +45,7 @@ Three specialists share a small, bounded tool-use runner:
 
 - **Astrid** owns the conversation. She can inspect participant-safe match results, request a background review, and ask permission to share a specific memory with a specific person.
 - **Memy** owns understanding. It can inspect current records and user evidence, then commit concise learnings and explicit profile facts. Astrid sees the committed result before replying.
-- **Matchy** owns the compatibility judgment for an assigned pair. It can inspect relationship records, check a proposed decision against application constraints, and return a proposal, consequential clarification, or hold.
+- **Matchy** owns the compatibility judgment for an assigned pair. It can inspect relationship beliefs and private story evidence, check a proposed decision against application constraints, and return a proposal, consequential clarification, or hold.
 
 Agents can call tools, observe results, and choose another step. Each run permits at most six model calls and eight tool calls within a 120-second deadline. Tools are scoped by role; the model cannot select an arbitrary person's private data. The application schedules matching work and enforces eligibility, revisions, sharing permissions and double opt-in. Successful runs record tool names, outcomes and prompt versions for inspection.
 
@@ -58,6 +58,8 @@ Agents can call tools, observe results, and choose another step. Each run permit
 5. Astrid writes a playful opening using information authorized for both people, then leaves. Further shared messages are not sent to any agent; check-ins happen privately.
 
 The [walkthrough](DEMO_WALKTHROUGH.md) contains prepared scenarios for repeatable consent and compatibility branches.
+
+Lore keeps consequential preferences and their conditions, including unusual or blunt requirements. Refreshing lore asks Memy to reconcile the authorized conversation with current memories, updating learnings, readiness and concise summaries before queuing a new match review. It preserves chat history and profile facts, respects user edits and deletion barriers, and rejects stale work after a concurrent correction. Stories inform Matchy’s private assessment but do not count as readiness or authorize disclosure.
 
 ## Validate
 

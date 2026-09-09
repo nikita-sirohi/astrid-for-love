@@ -63,3 +63,15 @@ test('Matchy can test a preliminary decision, observe rejection and revise to ho
  }});
  const result=await agents.review({phase:'preliminary',participants:[{id:'a'},{id:'b'}],memories:[{id:'a1',participantId:'a',facet:'dating.intent',status:'confirmed'},{id:'b1',participantId:'b',facet:'dating.intent',status:'confirmed'}]});assert.equal(result.decision,'withhold');assert.equal(result.metadata.steps,2);
 });
+
+test('Memy empty final acknowledgement preserves the authoritative committed batch',async()=>{
+ const participant={id:'a',name:'A'};let calls=0;
+ const batch={memories:[],stories:[],profileUpdates:[],clarificationUpdates:[],gaps:[{topic:'family',reason:'A real unresolved practical condition.'}]};
+ const agents=createAgents({config:{key:'test',model:'test'},client:async({input})=>{
+  if(!calls++)return {output:[call('commit_understanding','ack-test',JSON.stringify(batch))]};
+  assert.equal(JSON.parse(input.at(-1).output).result.revision,2);
+  return {data:{memories:[],stories:[],profileUpdates:[],clarificationUpdates:[],gaps:[]},output:[]};
+ }});
+ const result=await agents.understand({participant,memories:[],messages:[],clarifications:[],commitUnderstanding:async()=>({revision:2,updates:[]})});
+ assert.deepEqual(result.gaps,batch.gaps);assert.equal(calls,2);
+});

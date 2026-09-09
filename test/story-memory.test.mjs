@@ -38,8 +38,8 @@ test('stories persist before Astrid replies, stay private and outside readiness;
  await app.editMemory('maya',record.id,{},true);state=await repo.read();assert.equal((await app.listMemories('maya')).memories.length,0);assert.ok(!JSON.stringify(app.ownContext(state,'maya')).includes('Restores discarded'));
  const updates=await repo.transact(s=>app.memoryStore.applyInTransaction(s,'maya',[{...record,text:'Resurrected',evidenceIds:['u']}],new Set(['u'])));assert.equal(updates.length,0);
 });
-test('Matchy never receives stories and cannot cite them as compatibility evidence',async()=>{
+test('Matchy can inspect private stories as evidence without counting them as readiness',async()=>{
  const memories=[{...story(),id:'s',kind:'story',participantId:'maya',facet:null}];
- await assert.rejects(adapter({decision:'withhold',exploration:'hold',reason:'A hobby is not compatibility.',evidenceIds:['s'],clarifications:[]},ctx=>assert.deepEqual(ctx.memories,[])).review({participants:[person,{id:'eli'}],memories}),/Invalid agent/);
+ await adapter({decision:'needs_clarification',exploration:'hold',reason:'This chosen activity may reveal priorities, not a settled requirement.',evidenceIds:['s'],clarifications:[{participantId:'maya',topic:'ambition',facet:'ambition.work',purpose:'priority',evidenceIds:[]}]},ctx=>{assert.equal(ctx.memories[0].id,'s');assert.ok(Object.values(ctx.topicUnderstanding.maya).every(t=>t.status==='not_discussed'));}).review({participants:[person,{id:'eli'}],memories});
  await adapter({reply:'How did radio restoration start?',permissions:[]},ctx=>assert.equal(ctx.memories[0].kind,'story')).converse({...context,memories});
 });

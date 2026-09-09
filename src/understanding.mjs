@@ -32,6 +32,8 @@ export function topicUnderstanding(state,id) {
  }));
 }
 export const clarificationPurposes={
+ priority:'Understand how this stated priority shapes their choices and what they would put ahead of it.',
+ enjoyment:'Distinguish actively enjoying this dynamic from merely tolerating it in a partner.',
  baseline:'Establish a basic practical understanding of this area.',
  meaning:'Clarify what this expectation means to this person, rather than assuming a shared definition.',
  practical:'Explore what this expectation would look like in everyday life.',
